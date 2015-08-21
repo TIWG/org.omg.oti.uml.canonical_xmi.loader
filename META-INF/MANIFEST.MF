@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: OMG Tool-neutral Interface (OTI) UML Loader (Scala version)
+Bundle-SymbolicName: org.omg.oti.uml.loader
+Bundle-Version: 0.16.0.qualifier
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: org.omg.oti;bundle-version="0.16.0",
+ org.scala-lang.scala-library
+Export-Package: org.omg.oti.uml.loader,
+ test.org.omg.oti.uml.loader
+Bundle-ClassPath: .
