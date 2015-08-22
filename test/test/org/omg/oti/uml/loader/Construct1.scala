@@ -12,7 +12,10 @@ import scala.util.Try
  * that they can be executed on a particular OMG UML 2.5 compliant modeling tool
  * via a corresponding tool-specific OTI adapter.
  */
-abstract class Construct1[Uml <: UML](umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml]) {
+trait Construct1[Uml <: UML] {
+  
+  val umlF: UMLFactory[Uml]
+  val umlU: UMLUpdate[Uml]
   
   /**
    * A toplevel package with two nested packages.

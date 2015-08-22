@@ -8,6 +8,7 @@ import scala.util.Try
 import java.net.URI
 
 trait DocumentLoader[Uml <: UML] {
+  val catalog: CatalogURIMapper
   val umlF: UMLFactory[Uml]
   val umlU: UMLUpdate[Uml]
   val umlOps: UMLOps[Uml]
