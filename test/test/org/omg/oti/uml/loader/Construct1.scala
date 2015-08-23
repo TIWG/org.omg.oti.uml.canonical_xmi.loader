@@ -12,26 +12,26 @@ import scala.util.Try
  * that they can be executed on a particular OMG UML 2.5 compliant modeling tool
  * via a corresponding tool-specific OTI adapter.
  */
-trait Construct1[Uml <: UML] {
+trait Construct1[Uml <: UML] extends ConstructionTest[Uml] {
   
-  val umlF: UMLFactory[Uml]
-  val umlU: UMLUpdate[Uml]
+  import umlF._
+  import org.omg.oti.uml.write.api._
   
   /**
    * A toplevel package with two nested packages.
    */
-  def make1: Try[UMLPackage[Uml]] = 
+  override def make: Try[UMLPackage[Uml]] = 
     for {
-      top <- umlF.createUMLPackage 
-      _ = umlU.set_NamedElement_name(top, Some("Top"))
+      top <- createUMLPackage 
+      _ = top.setName( Some("Top") )
       
-      p1 <- umlF.createUMLPackage
-      _ = umlU.set_NamedElement_name(p1, Some("P1"))
+      p1 <- createUMLPackage
+      _ = p1.setName( Some("P1") )
       
-      p2 <- umlF.createUMLPackage
-      _ = umlU.set_NamedElement_name(p2, Some("P2"))
+      p2 <- createUMLPackage
+      _ = p2.setName( Some("P2") )
       
-      _ = umlU
-      .links_Package_owningPackage_compose_packagedElement_PackageableElement(top, Set(p1, p2))
+      _ = top.links_Package_owningPackage_compose_packagedElement_PackageableElement( Set(p1, p2) )
+      
     } yield top
 }
