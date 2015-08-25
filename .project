@@ -26,4 +26,11 @@
 		<nature>org.eclipse.pde.PluginNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>models</name>
+			<type>2</type>
+			<locationURI>PROJECT_LOC/resources</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>

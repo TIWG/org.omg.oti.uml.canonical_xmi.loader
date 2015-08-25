@@ -15,7 +15,6 @@ import scala.util.Try
 trait Construct1[Uml <: UML] extends ConstructionTest[Uml] {
   
   import umlF._
-  import org.omg.oti.uml.write.api._
   
   /**
    * A toplevel package with two nested packages.
