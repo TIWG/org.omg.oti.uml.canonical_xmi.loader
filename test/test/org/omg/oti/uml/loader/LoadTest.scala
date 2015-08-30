@@ -15,8 +15,6 @@ trait LoadTest[Uml <: UML] {
   val umlF: UMLFactory[Uml]  
   implicit val umlU: UMLUpdate[Uml]
     
-  def makeRootPackage(xmiLabel: String): Try[UMLPackage[Uml]]
-  
   def load: Try[UMLPackage[Uml]]
   
 }

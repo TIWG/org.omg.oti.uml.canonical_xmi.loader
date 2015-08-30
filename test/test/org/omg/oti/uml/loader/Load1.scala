@@ -27,6 +27,8 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
         throw new IllegalArgumentException(s"Cannot find model file!")
     }
      
+  def makeRootPackage(xmiLabel: String): Try[UMLPackage[Uml]]
+  
   override def load: Try[UMLPackage[Uml]] = {
     
     val env: EnvironmentModule = new EnvironmentModule()
@@ -44,7 +46,7 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
       case e: Elem => Some(e)
       case _ => None
     }
-    
+      
     val rootUMLNode: Elem = xmiChildren.head
     val rootUMLPkg: UMLPackage[Uml] = makeRootPackage(rootUMLNode.label) match {
       case Success(pkg) => pkg
