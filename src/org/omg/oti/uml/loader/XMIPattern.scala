@@ -62,8 +62,8 @@ object XMIPattern {
     
   def lookup_mofext_nsPrefix(idRef: String)(e: Elem): Option[MOFExtTagNSPrefix] =
     (e.label, 
-     lookupUnprefixedAttributeOrNestedElementText(e, "name"), 
-     lookupUnprefixedAttributeOrNestedElementText(e, "value"), 
+     matchUnprefixedAttributeOrNestedElementText(e, "name"), 
+     matchUnprefixedAttributeOrNestedElementText(e, "value"), 
      childElements(e).toList) match {
     case ("Tag", Some("org.omg.xmi.nsPrefix"), Some(nsPrefix), e1 :: Nil) 
       if "element" == e1.label =>
@@ -130,7 +130,7 @@ object XMIPattern {
    * if e = <x ...><a>blah</a>...</x>, key="a", then returns Some("blah")
    * otherwise returns None
    */
-  def lookupUnprefixedAttributeOrNestedElementText(e: Elem, key: String): Option[String] =
+  def matchUnprefixedAttributeOrNestedElementText(e: Elem, key: String): Option[String] =
     e.attribute(key) match {
     case Some(nodes) =>
       require(1 == nodes.size)
@@ -150,18 +150,48 @@ object XMIPattern {
   def lookupElementText(key: String)(n: Node): Option[String] =
     n match {
       case e: Elem if key == e.label =>
-        asXMIAttribute(e) match {
-          case s: Some[_] => 
-            s
-          case None =>            
-            require(false)
-            None
-        }
+        matchXMINestedText(e)
       case _ =>
         None
   }
             
-  def asXMIAttribute(e: Elem): Option[String] =
+  def matchXMICrossReference(e: Elem): Option[String] =
+    if (e.child.isEmpty && 1 == e.attributes.size)
+      e.attribute("href") match {
+        case Some(nodes) =>
+          require(1 == nodes.size)
+          nodes.head match {
+            case t: Text =>
+              Some(t.data)
+            case _ =>
+              require(false)
+              None
+          }
+        case None =>
+           None
+      }
+    else 
+      None
+    
+  def matchXMILocalReference(e: Elem): Option[String] =
+    if (e.child.isEmpty && 1 == e.attributes.size)
+      e.attribute("idref") match {
+        case Some(nodes) =>
+          require(1 == nodes.size)
+          nodes.head match {
+            case t: Text =>
+              Some(t.data)
+            case _ =>
+              require(false)
+              None
+          }
+        case None =>
+           None
+      }
+    else 
+      None
+    
+  def matchXMINestedText(e: Elem): Option[String] =
     if (1 == e.child.size && Null == e.attributes)
       e.child.head match {
         case t: Text =>
