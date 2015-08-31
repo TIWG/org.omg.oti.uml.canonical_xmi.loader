@@ -1,5 +1,6 @@
 package org.omg.oti.uml.loader
 
+import org.omg.oti.uml._
 import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
@@ -137,13 +138,59 @@ trait DocumentLoader[Uml <: UML] {
             case Some(factory) =>
               factory(umlF) match {
                 case Success(umlE) =>
-                  val x2u = xmi2uml + (xmiE -> umlE)
-                  show(s"* Factory => $xmiE")
-                  processAttributes(x2u, xmiE, nestedContents, Seq()) match {
-                    case Success(nestedOther) =>
-                      processNestedContent(x2u, xmiE, nestedOther, more :+ (xmiPattern, restContents), references)
-                    case Failure(f) =>
-                      Failure(f)
+                  xmi2uml.get(xmiPattern) match {
+                    case Some(umlParent) =>
+                      val x2u = xmi2uml + (xmiE -> umlE)
+                      val compositeMetaPropertyName = xmiE.element.label
+                      val parent2childOK = 
+                      umlParent.compositeMetaProperties.find( (mpf) =>
+                        mpf.propertyName == compositeMetaPropertyName &&
+                        mpf.domainType.runtimeClass.isInstance(umlParent) &&
+                        mpf.rangeType.runtimeClass.isInstance(umlE) ) match {
+                        
+                          case Some(mpf) =>                
+                                                              
+                            show(s"* Nested Composite ($mpf) => $xmiE")                    
+                            ( umlU.MetaPropertyReference2LinksUpdate.find(_.links_query == mpf),
+                              umlU.MetaPropertyIterable2LinksUpdate.find(_.links_query == mpf),
+                              umlU.MetaPropertySequence2LinksUpdate.find(_.links_query == mpf),
+                              umlU.MetaPropertySet2LinksUpdate.find(_.links_query == mpf) 
+                            ) match {
+                          
+                              case ( Some(cru), _, _, _ ) =>
+                                cru.linksCompose1(umlParent, umlE)
+                            
+                              case ( _, Some(cru), _, _ ) =>
+                                cru.linksCompose1(umlParent, umlE)
+                              
+                              case ( _, _, Some(cru), _ ) =>
+                                cru.linksCompose1(umlParent, umlE)
+                              
+                              case ( _, _, _, Some(cru) ) =>
+                                cru.linksCompose1(umlParent, umlE)
+                              
+                              case ( None, None, None, None ) =>
+                                Failure(new IllegalArgumentException(s"No composite meta property update found for '$compositeMetaPropertyName' on $umlParent"))
+                              
+                            }
+                            
+                          case None =>
+                            Failure(new IllegalArgumentException(s"No composite meta property update found for '$compositeMetaPropertyName' on $umlParent"))
+                              
+                        }
+                      parent2childOK match {
+                        case Success(_) =>   
+                          processAttributes(x2u, xmiE, nestedContents, Seq()) match {
+                            case Success(nestedOther) =>
+                              processNestedContent(x2u, xmiE, nestedOther, more :+ (xmiPattern, restContents), references)
+                            case Failure(f) =>
+                              Failure(f)
+                          }
+                        case Failure(f) =>
+                          Failure(f)
+                      }
+                    case None =>
+                      Failure(new IllegalArgumentException(s"There should be an element for $xmiPattern"))
                   }
                 case Failure(t) => 
                   Failure(t)
@@ -197,8 +244,8 @@ trait DocumentLoader[Uml <: UML] {
    xmiReferences: Seq[Elem])
   : Try[Unit] = {
     // TODO
-    show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
-    xmiReferences.foreach { ref => show(s"* ref: $ref") }
+    //show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
+    //xmiReferences.foreach { ref => show(s"* ref: $ref") }
     Success(Unit)
   }
     
@@ -209,8 +256,8 @@ trait DocumentLoader[Uml <: UML] {
    tags: Seq[Elem])
   : Try[Unit] = {
     // TODO
-    show(s"* Update ${tags.size} tags")
-    tags.foreach { t => show(s"* tag: $t") }
+    //show(s"* Update ${tags.size} tags")
+    //tags.foreach { t => show(s"* tag: $t") }
     Success(Unit)
   }
   
