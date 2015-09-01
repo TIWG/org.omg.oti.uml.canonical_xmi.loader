@@ -18,7 +18,7 @@ trait Load2[Uml <: UML] {
   implicit val umlU: UMLUpdate[Uml]
     
   val loader: DocumentLoader[Uml]
-  val loadCL = classOf[Load1[Uml]].getClassLoader
+  val loadCL = classOf[Load2[Uml]].getClassLoader
   val modelPath1 = "resources/loadTests/SysML.xmi"
   val modelPath2 = "loadTests/SysML.xmi"
 
