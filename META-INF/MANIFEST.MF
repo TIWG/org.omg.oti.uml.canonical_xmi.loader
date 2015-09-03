@@ -4,11 +4,11 @@ Bundle-Name: OMG Tool-neutral Interface (OTI) UML Loader (Scala version)
 Bundle-SymbolicName: org.omg.oti.uml.loader;singleton:=true
 Bundle-Version: 0.17.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
-Require-Bundle: org.scala-lang.scala-library,
- org.scala-lang.scala-reflect;bundle-version="2.11.7",
+Require-Bundle: org.scala-lang.scala-library;visibility:=reexport,
+ org.scala-lang.scala-reflect;bundle-version="2.11.7";visibility:=reexport,
  org.eclipse.ease;bundle-version="0.3.0",
  org.eclipse.ease.modules.platform;bundle-version="0.3.0",
- org.omg.oti;bundle-version="0.17.0"
+ org.omg.oti;bundle-version="0.17.0";visibility:=reexport
 Export-Package: org.omg.oti.uml.loader,
  test.org.omg.oti.uml.loader
 Bundle-ClassPath: .
