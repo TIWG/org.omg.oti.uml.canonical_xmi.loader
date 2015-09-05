@@ -12,8 +12,6 @@ import java.net.URL
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
-import org.eclipse.ease.modules.EnvironmentModule
-
 /**
  * In-progress: search for 'TODO'
  */
@@ -22,15 +20,6 @@ trait DocumentLoader[Uml <: UML] {
   val umlF: UMLFactory[Uml]
   val umlU: UMLUpdate[Uml]
   implicit val umlOps: UMLOps[Uml]
-  
-  val env: EnvironmentModule = new EnvironmentModule()
-    
-  def show(message: String): Unit = {
-    if (null != env.getScriptEngine)
-      env.print(message)
-    else
-      println(message)
-  }
   
   /**
    * Load an OTI UML 2.5 Package from its OTI Canonical XMI Document serialization.
@@ -46,8 +35,6 @@ trait DocumentLoader[Uml <: UML] {
   (implicit nodeT: TypeTag[Document[Uml]], edgeT: TypeTag[DocumentEdge[Document[Uml]]])
   : Try[(SerializableDocument[Uml], DocumentSet[Uml])] = {
      
-    show(s"Loading model from: $url")
-    
     // Cannonical XMI: B2.2: Always use a root xmi:XMI element
     
     val xmiRoot: Node = XML.load(url.openStream())
@@ -90,18 +77,7 @@ trait DocumentLoader[Uml <: UML] {
           processXMIContents(d, ds)(xmi2uml2, xmi2contents1.tail, references ++ xmiReferences)
       }
     
-  /**
-   * The attributes appear before other content (references or nested children)
-   */
-  def processXMIElementAttributesAndNestedContent
-  (d: SerializableDocument[Uml], 
-   ds: DocumentSet[Uml],
-   xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]])
-  (xmiPattern: XMIElementDefinition,
-   attributesAndOther: Seq[Elem])
-  : Try[(Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])])] = {
-   
-    @annotation.tailrec def processAttributes
+  @annotation.tailrec final def processAttributes
     (xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]],
      xmiP: XMIElementDefinition,
      content: Seq[Elem],
@@ -119,7 +95,7 @@ trait DocumentLoader[Uml <: UML] {
           processAttributes(xmi2uml, xmiP, content.tail, other :+ content.head)
       }
              
-    @annotation.tailrec def processNestedContent
+    @annotation.tailrec final def processNestedContent
     (xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]], 
      xmiPattern: XMIElementDefinition,
      content: Seq[Elem], 
@@ -206,15 +182,22 @@ trait DocumentLoader[Uml <: UML] {
           processNestedContent(xmi2uml, xmiPattern, content.tail, more, references.updated(xmiPattern, xmiReferences))
       }
     
-    
+  /**
+   * The attributes appear before other content (references or nested children)
+   */
+  def processXMIElementAttributesAndNestedContent
+  (d: SerializableDocument[Uml], 
+   ds: DocumentSet[Uml],
+   xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]])
+  (xmiPattern: XMIElementDefinition,
+   attributesAndOther: Seq[Elem])
+  : Try[(Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])])] = 
     for {
       otherContent <- processAttributes(xmi2uml, xmiPattern, attributesAndOther, Seq())
       (xmi2umlFull, xmiReferences) <- processNestedContent(xmi2uml, xmiPattern, otherContent, Seq(), Map())
     } yield (xmi2umlFull, xmiReferences)
-      
-  }
     
-  @annotation.tailrec private final def processXMIReferences
+  @annotation.tailrec final def processXMIReferences
   (d: SerializableDocument[Uml], 
    ds: DocumentSet[Uml],
    xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]],
@@ -310,8 +293,7 @@ trait DocumentLoader[Uml <: UML] {
             case Some(factory) =>
               for {
                 root <- factory(umlF)
-                _ = show(s"* Factory => $xmiPattern")
-                sd = SerializableDocument[Uml](new java.net.URI(uri), nsPrefix, uuidPrefix=nsPrefix, documentURL=url.toURI, scope=root)
+                sd = SerializableDocument(new java.net.URI(uri), nsPrefix, uuidPrefix=nsPrefix, documentURL=url.toURI, scope=root)
                 xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
                 xmi2contents = Seq[(XMIElementDefinition, Seq[Elem])]((xmiPattern -> contents))                
               } yield (sd, xmi2uml, xmi2contents, tags)

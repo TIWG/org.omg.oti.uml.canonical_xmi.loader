@@ -6,8 +6,6 @@ import scala.util._
 import scala.xml._
 import java.net.URL
 
-import org.eclipse.ease.modules.EnvironmentModule
-
 sealed trait XMIPattern {
   val element: Elem
 }

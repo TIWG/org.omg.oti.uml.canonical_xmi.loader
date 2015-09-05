@@ -7,8 +7,6 @@ import org.omg.oti.uml.read.operations._
 import scala.util._
 import scala.xml._
 
-import org.eclipse.ease.modules.EnvironmentModule
-
 trait Load1[Uml <: UML] extends LoadTest[Uml] {
   
   import umlF._
@@ -31,9 +29,6 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
   
   override def load: Try[UMLPackage[Uml]] = {
     
-    val env: EnvironmentModule = new EnvironmentModule()
-    env.print(s"Loading model from: $modelURL")
-    
     // Cannonical XMI: B2.2: Always use a root xmi:XMI element
     val xmiRoot: Node = XML.load(modelURL.openStream())
     require("XMI" == xmiRoot.label)
@@ -52,8 +47,8 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
       case Success(pkg) => pkg
       case Failure(f) => return Failure(f)
     }
-    env.print(s"uml root node label: ${rootUMLNode.label}")
-    env.print(s"uml root element: ${rootUMLPkg}")
+    System.out.println(s"uml root node label: ${rootUMLNode.label}")
+    System.out.println(s"uml root element: ${rootUMLPkg}")
     Success(???)
   }
   

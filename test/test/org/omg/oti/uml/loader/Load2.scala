@@ -6,7 +6,6 @@ import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.read.operations._
 import scala.util.{Failure, Success, Try}
 import scala.xml.{Document => XMLDocument, _}
-import org.eclipse.ease.modules.EnvironmentModule
 import org.omg.oti.uml.loader.DocumentLoader
 
 import scala.reflect.runtime.universe
