@@ -1,12 +1,14 @@
 package test.org.omg.oti.uml.loader
 
 import org.omg.oti.uml.canonicalXMI._
+import org.omg.oti.uml.xmi._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.read.operations._
 import scala.util.{Failure, Success, Try}
 import scala.xml.{Document => XMLDocument, _}
 import org.omg.oti.uml.loader.DocumentLoader
+import java.net.URL
 
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
@@ -31,9 +33,11 @@ trait Load2[Uml <: UML] {
         throw new IllegalArgumentException(s"Cannot find model file!")
     }
      
+  def url2loadURL(url: URL): loader.documentOps.LoadURL
+  
   def load
   (ds: DocumentSet[Uml])  
   (implicit nodeT: TypeTag[Document[Uml]], edgeT: TypeTag[DocumentEdge[Document[Uml]]])
   : Try[(SerializableDocument[Uml], DocumentSet[Uml])] =
-    loader.loadDocument(modelURL, ds)
+    loader.loadDocument(url2loadURL(modelURL), ds)
 }

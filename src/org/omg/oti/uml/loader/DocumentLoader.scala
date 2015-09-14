@@ -1,3 +1,42 @@
+/*
+ *
+ *  License Terms
+ *
+ *  Copyright (c) 2015, California Institute of Technology ("Caltech").
+ *  U.S. Government sponsorship acknowledged.
+ *
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *
+ *
+ *   *   Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *
+ *   *   Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the
+ *       distribution.
+ *
+ *   *   Neither the name of Caltech nor its operating division, the Jet
+ *       Propulsion Laboratory, nor the names of its contributors may be
+ *       used to endorse or promote products derived from this software
+ *       without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package org.omg.oti.uml.loader
 
 import org.omg.oti.uml._
@@ -5,22 +44,29 @@ import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.read.operations._
+import org.omg.oti.uml.xmi._
 import scala.util.{Failure, Success, Try}
-import scala.xml.{ Document => XMLDocument, _}
-import java.net.URL
+import scala.xml.{Document => XMLDocument, _}
+import java.io.InputStream
+import java.net.URI
 
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 /**
- * In-progress: search for 'TODO'
+ * The inverse of the XMI Document production rules
+ *
+ * @see OMG XMI 2.5.1, formal/15-06-07, Section 9
+ *
+ * @tparam Uml Type signature of a tool-specific adaptation of OMG UML 2.5
  */
 trait DocumentLoader[Uml <: UML] {
-  val catalog: CatalogURIMapper
-  val umlF: UMLFactory[Uml]
-  val umlU: UMLUpdate[Uml]
+
   implicit val umlOps: UMLOps[Uml]
-  
+  implicit val documentOps: DocumentOps[Uml]
+
+  import documentOps._
+
   /**
    * Load an OTI UML 2.5 Package from its OTI Canonical XMI Document serialization.
    *
@@ -30,86 +76,96 @@ trait DocumentLoader[Uml <: UML] {
    *         - the SerializableDocument corresponding to the single root UML Package loaded
    *         - the new DocumentSet with the loaded SerializableDocument
    */
-	def loadDocument
-  (url: URL, ds: DocumentSet[Uml])
-  (implicit nodeT: TypeTag[Document[Uml]], edgeT: TypeTag[DocumentEdge[Document[Uml]]])
+  def loadDocument
+  (url: documentOps.LoadURL, ds: DocumentSet[Uml])
+  (implicit nodeT: TypeTag[Document[Uml]],
+   edgeT: TypeTag[DocumentEdge[Document[Uml]]])
   : Try[(SerializableDocument[Uml], DocumentSet[Uml])] = {
-     
+
     // Cannonical XMI: B2.2: Always use a root xmi:XMI element
-    
-    val xmiRoot: Node = XML.load(url.openStream())
+
+    val xmiRoot: Node = XML.load(openExternalDocumentStreamForImport(url))
     require("XMI" == xmiRoot.label)
-    
-    val namespaces: Map[String, String] = XMIPattern.collectNamespaces(xmiRoot)
-    
+
+    val namespaces: Map[String, String] =
+      XMIPattern.collectNamespaces(xmiRoot)
+
     for {
       ns <- Seq("xmi", "xsi", "uml", "mofext")
-    } require(namespaces.contains(ns), s"'$ns' namespace must be declared in root XMI node")
-    
-    // there must be at least 1 child, which is a kind of UML Package, Profile or Model
-    // subsequent children are XML Element nodes representing mof tags or stereotype instances
-    
+    } require(
+      namespaces.contains(ns),
+      s"'$ns' namespace must be declared in root XMI node")
+
+    // there must be at least 1 child, which is a kind of UML Package,
+    // Profile or Model subsequent children are XML Element nodes 
+    // representing mof tags or stereotype instances
+
     val xmiElements: Seq[Elem] = XMIPattern.childElements(xmiRoot)
-    
+
     for {
       (document, xmi2umlRoot, xmi2contents, tags) <- makeDocumentFromRootNode(url, xmiElements)
       (xmi2umlFull, xmiReferences) <- processXMIContents(document, ds)(xmi2umlRoot, xmi2contents, Map())
       _ <- processXMIReferences(document, ds, xmi2umlFull, xmiReferences)
       _ <- processXMITags(document, ds, xmi2umlFull, tags)
-    } yield (document, ds.copy(serializableDocuments = ds.serializableDocuments + document))
-    
-   }
-  
+      ds1 <- addDocument(ds, document)
+    } yield (document, ds1)
+
+  }
+
+  type XMI2UMLElementMap = Map[XMIElementDefinition, UMLElement[Uml]]
+
   @annotation.tailrec private def processXMIContents
-  (d: SerializableDocument[Uml], 
+  (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml])
-  (xmi2uml1: Map[XMIElementDefinition, UMLElement[Uml]], 
+  (xmi2uml1: XMI2UMLElementMap,
    xmi2contents1: Seq[(XMIElementDefinition, Seq[Elem])],
    references: Map[XMIElementDefinition, Seq[Elem]])
-  : Try[(Map[XMIElementDefinition, UMLElement[Uml]], Map[XMIElementDefinition, Seq[Elem]])] =
+  : Try[(XMI2UMLElementMap, Map[XMIElementDefinition, Seq[Elem]])] =
     if (xmi2contents1.isEmpty)
       Success((xmi2uml1, references))
     else
-      processXMIElementAttributesAndNestedContent(d, ds, xmi2uml1)(xmi2contents1.head._1, xmi2contents1.head._2) match {
-        case Failure(f) =>
+      (processXMIElementAttributesAndNestedContent(d, ds, xmi2uml1) _).tupled(xmi2contents1.head) match {
+        case Failure(f)                         =>
           Failure(f)
-        case Success((xmi2uml2, xmiReferences)) => 
+        case Success((xmi2uml2, xmiReferences)) =>
           processXMIContents(d, ds)(xmi2uml2, xmi2contents1.tail, references ++ xmiReferences)
       }
-    
+
   @annotation.tailrec final def processAttributes
-    (xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]],
-     xmiP: XMIElementDefinition,
-     content: Seq[Elem],
-     other: Seq[Elem])
-    : Try[Seq[Elem]] =
-      if (content.isEmpty)
-        Success(other)
-      else 
-        XMIPattern.matchXMINestedText(content.head) match {
-        case Some(attributeValue) =>                    
-          // check intermediate computations that may fail and ensure the recursive call is in the last position
+  (xmi2uml: XMI2UMLElementMap,
+   xmiP: XMIElementDefinition,
+   content: Seq[Elem],
+   other: Seq[Elem])
+  : Try[Seq[Elem]] =
+    if (content.isEmpty)
+      Success(other)
+    else
+      XMIPattern.matchXMINestedText(content.head) match {
+        case Some(attributeValue) =>
+          // check intermediate computations that may fail and 
+          // ensure the recursive call is in the last position
           updateElementAttribute(xmiP, xmi2uml.get(xmiP), content.head.label, attributeValue).get
           processAttributes(xmi2uml, xmiP, content.tail, other)
-        case None =>
+        case None                 =>
           processAttributes(xmi2uml, xmiP, content.tail, other :+ content.head)
       }
-             
-    @annotation.tailrec final def processNestedContent
-    (xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]], 
-     xmiPattern: XMIElementDefinition,
-     content: Seq[Elem], 
-     more: Seq[(XMIElementDefinition, Seq[Elem])],
-     references: Map[XMIElementDefinition, Seq[Elem]])
-    : Try[(Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])])] =
-      if (content.isEmpty)
-        if (more.isEmpty)
-          Success((xmi2uml, references.toSeq))
-         else
-           processNestedContent(xmi2uml, more.head._1, more.head._2, more.tail, references)   
-      else 
-        XMIPattern.matchXMIPattern(content) match {
-        case Some((xmiE @ XMIElementDefinition(e, xmiID, xmiUUID, xmiType, nsPrefix, nestedContents), restContents)) =>
+
+  @annotation.tailrec final def processNestedContent
+  (xmi2uml: XMI2UMLElementMap,
+   xmiPattern: XMIElementDefinition,
+   content: Seq[Elem],
+   more: Seq[(XMIElementDefinition, Seq[Elem])],
+   references: Map[XMIElementDefinition, Seq[Elem]])
+  : Try[(XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])] =
+    if (content.isEmpty)
+      if (more.isEmpty)
+        Success((xmi2uml, references.toSeq))
+      else
+        processNestedContent(xmi2uml, more.head._1, more.head._2, more.tail, references)
+    else
+      XMIPattern.matchXMIPattern(content) match {
+        case Some((xmiE@
+          XMIElementDefinition(e, xmiID, xmiUUID, xmiType, nsPrefix, nestedContents), restContents)) =>
           umlF.reflectiveFactoryLookup.get(xmiType) match {
             case Some(factory) =>
               factory(umlF) match {
@@ -118,111 +174,119 @@ trait DocumentLoader[Uml <: UML] {
                     case Some(umlParent) =>
                       val x2u = xmi2uml + (xmiE -> umlE)
                       val compositeMetaPropertyName = xmiE.element.label
-                      val parent2childOK = 
-                      umlParent.compositeMetaProperties.find( (mpf) =>
-                        mpf.propertyName == compositeMetaPropertyName &&
-                        mpf.domainType.runtimeClass.isInstance(umlParent) &&
-                        mpf.rangeType.runtimeClass.isInstance(umlE) ) match {
-                        
-                          case Some(mpf) =>                
-                                                              
-                            show(s"* Nested Composite ($mpf) => $xmiE")                    
-                            ( umlU.MetaPropertyReference2LinksUpdate.find(_.links_query == mpf),
+                      val parent2childOK =
+                        umlParent.compositeMetaProperties.find((mpf) =>
+                          mpf.propertyName == compositeMetaPropertyName &&
+                          mpf.domainType.runtimeClass.isInstance(umlParent) &&
+                          mpf.rangeType.runtimeClass.isInstance(umlE)) match {
+
+                          case Some(mpf) =>
+
+                            show(s"* Nested Composite ($mpf) => $xmiE")
+                            (umlU.MetaPropertyReference2LinksUpdate.find(_.links_query == mpf),
                               umlU.MetaPropertyIterable2LinksUpdate.find(_.links_query == mpf),
                               umlU.MetaPropertySequence2LinksUpdate.find(_.links_query == mpf),
-                              umlU.MetaPropertySet2LinksUpdate.find(_.links_query == mpf) 
-                            ) match {
-                          
-                              case ( Some(cru), _, _, _ ) =>
+                              umlU.MetaPropertySet2LinksUpdate.find(_.links_query == mpf)
+                              ) match {
+
+                              case (Some(cru), _, _, _) =>
                                 cru.linksCompose1(umlParent, umlE)
-                            
-                              case ( _, Some(cru), _, _ ) =>
+
+                              case (_, Some(cru), _, _) =>
                                 cru.linksCompose1(umlParent, umlE)
-                              
-                              case ( _, _, Some(cru), _ ) =>
+
+                              case (_, _, Some(cru), _) =>
                                 cru.linksCompose1(umlParent, umlE)
-                              
-                              case ( _, _, _, Some(cru) ) =>
+
+                              case (_, _, _, Some(cru)) =>
                                 cru.linksCompose1(umlParent, umlE)
-                              
-                              case ( None, None, None, None ) =>
-                                Failure(new IllegalArgumentException(s"No composite meta property update found for '$compositeMetaPropertyName' on $umlParent"))
-                              
+
+                              case (None, None, None, None) =>
+                                Failure(new IllegalArgumentException(
+                                  s"No composite meta property update found for" +
+                                  s" '$compositeMetaPropertyName' on $umlParent"))
+
                             }
-                            
+
                           case None =>
-                            Failure(new IllegalArgumentException(s"No composite meta property update found for '$compositeMetaPropertyName' on $umlParent"))
-                              
+                            Failure(new IllegalArgumentException(
+                              s"No composite meta property update found for " +
+                              s"'$compositeMetaPropertyName' on $umlParent"))
+
                         }
                       parent2childOK match {
-                        case Success(_) =>   
+                        case Success(_) =>
                           processAttributes(x2u, xmiE, nestedContents, Seq()) match {
                             case Success(nestedOther) =>
-                              processNestedContent(x2u, xmiE, nestedOther, more :+ (xmiPattern, restContents), references)
-                            case Failure(f) =>
+                              processNestedContent(
+                                x2u, xmiE, nestedOther,
+                                more :+(xmiPattern, restContents), references)
+                            case Failure(f)           =>
                               Failure(f)
                           }
                         case Failure(f) =>
                           Failure(f)
                       }
-                    case None =>
+                    case None            =>
                       Failure(new IllegalArgumentException(s"There should be an element for $xmiPattern"))
                   }
-                case Failure(t) => 
+                case Failure(t)    =>
                   Failure(t)
-              } 
-            case None =>
+              }
+            case None          =>
               Failure(new IllegalArgumentException(s"No factory found for xmiType=uml:$xmiType"))
           }
-        case Some((xmiOther, otherElements)) =>
+        case Some((xmiOther, otherElements))                                                         =>
           // TODO
           ???
-        case None =>
+        case None                                                                                    =>
           val xmiReferences = references.getOrElse(xmiPattern, Seq()) :+ content.head
-          processNestedContent(xmi2uml, xmiPattern, content.tail, more, references.updated(xmiPattern, xmiReferences))
+          processNestedContent(
+            xmi2uml, xmiPattern, content.tail,
+            more, references.updated(xmiPattern, xmiReferences))
       }
-    
+
   /**
    * The attributes appear before other content (references or nested children)
    */
   def processXMIElementAttributesAndNestedContent
-  (d: SerializableDocument[Uml], 
+  (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml],
-   xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]])
+   xmi2uml: XMI2UMLElementMap)
   (xmiPattern: XMIElementDefinition,
    attributesAndOther: Seq[Elem])
-  : Try[(Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])])] = 
+  : Try[(XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])] =
     for {
       otherContent <- processAttributes(xmi2uml, xmiPattern, attributesAndOther, Seq())
       (xmi2umlFull, xmiReferences) <- processNestedContent(xmi2uml, xmiPattern, otherContent, Seq(), Map())
     } yield (xmi2umlFull, xmiReferences)
-    
+
   @annotation.tailrec final def processXMIReferences
-  (d: SerializableDocument[Uml], 
+  (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml],
-   xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]],
+   xmi2uml: XMI2UMLElementMap,
    xmiReferences: Map[XMIElementDefinition, Seq[Elem]])
-  : Try[Unit] = 
+  : Try[Unit] =
     if (xmiReferences.isEmpty)
       Success(Unit)
     else
       xmi2uml.get(xmiReferences.head._1) match {
-      case Some(umlE) =>      
-        updateElementReferences(d, ds, xmi2uml, xmiReferences.head._1, umlE, xmiReferences.head._2) match {
-          case Success(_) =>
-            processXMIReferences(d, ds, xmi2uml, xmiReferences.tail)
-          case Failure(t) =>
-            Failure(t)
-        }
-      case None =>
-        Failure(new IllegalArgumentException(s"Missing entry for ${xmiReferences.head._1}"))
-    }
-  
+        case Some(umlE) =>
+          updateElementReferences(d, ds, xmi2uml, xmiReferences.head._1, umlE, xmiReferences.head._2) match {
+            case Success(_) =>
+              processXMIReferences(d, ds, xmi2uml, xmiReferences.tail)
+            case Failure(t) =>
+              Failure(t)
+          }
+        case None       =>
+          Failure(new IllegalArgumentException(s"Missing entry for ${xmiReferences.head._1}"))
+      }
+
   def updateElementReferences
-  (d: SerializableDocument[Uml], 
+  (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml],
-   xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]],
-   xmiElement: XMIElementDefinition, 
+   xmi2uml: XMI2UMLElementMap,
+   xmiElement: XMIElementDefinition,
    umlElement: UMLElement[Uml],
    xmiReferences: Seq[Elem])
   : Try[Unit] = {
@@ -231,11 +295,11 @@ trait DocumentLoader[Uml <: UML] {
     //xmiReferences.foreach { ref => show(s"* ref: $ref") }
     Success(Unit)
   }
-    
+
   def processXMITags
-  (d: SerializableDocument[Uml], 
+  (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml],
-   xmi2uml: Map[XMIElementDefinition, UMLElement[Uml]], 
+   xmi2uml: XMI2UMLElementMap,
    tags: Seq[Elem])
   : Try[Unit] = {
     // TODO
@@ -243,71 +307,78 @@ trait DocumentLoader[Uml <: UML] {
     //tags.foreach { t => show(s"* tag: $t") }
     Success(Unit)
   }
-  
+
   def updateElementAttribute
-  (xmiE: XMIElementDefinition, 
-   e: Option[UMLElement[Uml]], 
-   attributeName: String,  
+  (xmiE: XMIElementDefinition,
+   e: Option[UMLElement[Uml]],
+   attributeName: String,
    attributeValue: String)
   : Try[Unit] =
     e match {
-    case Some(umlElement) =>
-      // TODO
-      show(s"TODO: update ${xmiE.xmiType}::$attributeName = $attributeValue")
-      Success(Unit)
-    case None =>
-      Failure(new IllegalArgumentException(
+      case Some(umlElement) =>
+        // TODO
+        show(s"TODO: update ${xmiE.xmiType}::$attributeName = $attributeValue")
+        Success(Unit)
+      case None             =>
+        Failure(new IllegalArgumentException(
           s"There should be a UML element corresponding to" +
           s"to $xmiE to update the attribute $attributeName with value $attributeValue"))
-  }
-  
+    }
+
   def makeDocumentFromRootNode
-  (url: URL, xmiElements: Seq[Elem])
-  : Try[(SerializableDocument[Uml], Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
+  (url: documentOps.LoadURL, xmiElements: Seq[Elem])
+  : Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
     XMIPattern.matchXMIPattern(xmiElements) match {
-    case Some((xmiPattern, xmiTags)) =>
-      xmiPattern match {
-        case xmiElement: XMIElementDefinition =>
-          makeDocumentFromRootNode(url, xmiElement, xmiTags)
-        case _ =>
-          Failure(new IllegalArgumentException(s"Not supported: $xmiPattern"))
-      }
-    case None =>
-      Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
-  }
-  
+      case Some((xmiPattern, xmiTags)) =>
+        xmiPattern match {
+          case xmiElement: XMIElementDefinition =>
+            makeDocumentFromRootNode(url, xmiElement, xmiTags)
+          case _                                =>
+            Failure(new IllegalArgumentException(s"Not supported: $xmiPattern"))
+        }
+      case None                        =>
+        Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
+    }
+
   def makeDocumentFromRootNode
-  (url: URL, pattern: XMIElementDefinition, tags: Seq[Elem])
-  : Try[(SerializableDocument[Uml], Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
+  (url: documentOps.LoadURL, pattern: XMIElementDefinition, tags: Seq[Elem])
+  : Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
     pattern match {
-    case xmiPattern @ XMIElementDefinition(e, xmiID, xmiUUID, xmiType, Some(MOFExtTagNSPrefix(_, nsPrefix, _)), contents) =>
-      contents
-      .foldLeft(Option.empty[String])({
-        case (s: Some[_], _) =>
-          s
-        case (None, e) =>
-          XMIPattern.lookupElementText("URI")(e)
-      })
-      .fold(missingURIAttribute)( (uri: String) => {
-          umlF.reflectiveFactoryLookup.get(xmiType) match {
+      case xmiPattern@
+        XMIElementDefinition(e, xmiID, xmiUUID, xmiType, Some(MOFExtTagNSPrefix(_, nsPrefix, _)), contents) =>
+        contents
+        .foldLeft(Option.empty[String])({
+          case (s: Some[_], _) =>
+            s
+          case (None, e)       =>
+            XMIPattern.lookupElementText("URI")(e)
+        })
+        .fold(missingURIAttribute)((uri: String) => {
+          umlF.reflectivePackageFactoryLookup.get(xmiType) match {
             case Some(factory) =>
               for {
                 root <- factory(umlF)
-                sd = SerializableDocument(new java.net.URI(uri), nsPrefix, uuidPrefix=nsPrefix, documentURL=url.toURI, scope=root)
+                sd <- createSerializableDocumentFromImportedRootPackage(
+                  uri = new java.net.URI(uri),
+                  nsPrefix = nsPrefix,
+                  uuidPrefix = nsPrefix,
+                  documentURL = url,
+                  scope = root)
                 xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
-                xmi2contents = Seq[(XMIElementDefinition, Seq[Elem])]((xmiPattern -> contents))                
+                xmi2contents = Seq[(XMIElementDefinition, Seq[Elem] )](xmiPattern -> contents)
               } yield (sd, xmi2uml, xmi2contents, tags)
+
             case None =>
-              Failure(new IllegalArgumentException(s"No factory found for xmiType=uml:$xmiType"))
+              Failure(new IllegalArgumentException(s"No Package-based factory found for xmiType=uml:$xmiType"))
           }
-      })
-      
-    case _ =>
-      Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
-  }
-  
+        })
+
+      case _ =>
+        Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
+    }
+
   protected def missingURIAttribute
-  : Try[(SerializableDocument[Uml], Map[XMIElementDefinition, UMLElement[Uml]], Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
+  : Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
     Failure(new IllegalArgumentException(s"Missing URI attribute for root element"))
-    
+
 }

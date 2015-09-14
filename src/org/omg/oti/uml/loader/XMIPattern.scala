@@ -1,3 +1,42 @@
+/*
+ *
+ *  License Terms
+ *
+ *  Copyright (c) 2015, California Institute of Technology ("Caltech").
+ *  U.S. Government sponsorship acknowledged.
+ *
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *
+ *
+ *   *   Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *
+ *   *   Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the
+ *       distribution.
+ *
+ *   *   Neither the name of Caltech nor its operating division, the Jet
+ *       Propulsion Laboratory, nor the names of its contributors may be
+ *       used to endorse or promote products derived from this software
+ *       without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package org.omg.oti.uml.loader
 
 import scala.xml._
@@ -6,10 +45,19 @@ import scala.util._
 import scala.xml._
 import java.net.URL
 
+/**
+ * A pattern of an XMI tree rooted at an XML Element
+ */
 sealed trait XMIPattern {
   val element: Elem
 }
 
+/**
+ * A pattern of an XMI tree corresponding to the MOF tag 'nsPrefix'
+ * @param element The XML Element corresponding to the XMI MOF tag 'nsPrefix'
+ * @param nsPrefix The value of the 'nsPrefix'
+ * @param idRef The MOF element to which the 'nsPrefix' tag applies
+ */
 case class MOFExtTagNSPrefix(
     override val element: Elem,
     nsPrefix: String,
@@ -20,7 +68,16 @@ case class MOFExtTagNSPrefix(
     s"MOFExtTagNSPrefix(nsPrefix=$nsPrefix, xmi:idref=$idRef)"
     
 }
-    
+
+/**
+ * A pattern of an XMI tree corresponding to a UML Element of some kind
+ * @param element The XML Element that is the XMI Document representation of an UML Element
+ * @param xmiID The xmi:id of this UML Element
+ * @param xmiUUID The xmi:uuid of this UML ELement
+ * @param xmiType The metaclass of this UML ELement
+ * @param nsPrefix Optionally, a MOF nsPrefix tag
+ * @param contents Nested XML ELements corresponding to the XMI Document representation of this UML Element's content
+ */
 case class XMIElementDefinition(
     override val element: Elem,
     xmiID: String,
