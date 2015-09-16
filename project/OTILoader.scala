@@ -87,6 +87,14 @@ object OTILoader extends Build {
         "gov.nasa.jpl.mbee.omg.oti" %% "oti-canonical-xmi"
         % Versions.oti_canonicalXMI_version withSources() withJavadoc()
       ),
+
+      scalacOptions ++= List("-target:jvm-1.7", "-feature"),
+      scalacOptions in (Compile,doc) ++= Seq(
+        "-diagrams",
+        "-doc-title", name.value,
+        "-doc-root-content", baseDirectory.value + "/rootdoc.txt"
+      ),
+
       scalaSource in Compile := baseDirectory.value / "src",
       classDirectory in Compile := baseDirectory.value / "bin",
       scalaSource in Test := baseDirectory.value / "test",
