@@ -39,16 +39,17 @@
  */
 package test.org.omg.oti.uml.loader
 
-import org.omg.oti.uml.canonicalXMI._
-import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
-import org.omg.oti.uml.read.operations._
+import scala.{Option,None,Some,StringContext}
+import scala.Predef.{???,classOf,require,String}
+import scala.collection.Seq
 import scala.util._
 import scala.xml._
+import java.lang.System
+import java.lang.IllegalArgumentException
 
 trait Load1[Uml <: UML] extends LoadTest[Uml] {
-  
-  import umlF._
+
     
   val loadCL = classOf[Load1[Uml]].getClassLoader
   val modelPath1 = "resources/loadTests/SysML.xmi"
@@ -82,13 +83,11 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
     }
       
     val rootUMLNode: Elem = xmiChildren.head
-    val rootUMLPkg: UMLPackage[Uml] = makeRootPackage(rootUMLNode.label) match {
-      case Success(pkg) => pkg
-      case Failure(f) => return Failure(f)
-    }
-    System.out.println(s"uml root node label: ${rootUMLNode.label}")
-    System.out.println(s"uml root element: ${rootUMLPkg}")
-    Success(???)
+    for {
+      rootUMLPkg: UMLPackage[Uml] <- makeRootPackage(rootUMLNode.label)
+      _ = System.out.println(s"uml root node label: ${rootUMLNode.label}")
+      _ = System.out.println(s"uml root element: ${rootUMLPkg}")
+    } yield rootUMLPkg
   }
   
 }

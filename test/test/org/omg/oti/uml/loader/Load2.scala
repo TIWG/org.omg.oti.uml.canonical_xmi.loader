@@ -40,20 +40,24 @@
 package test.org.omg.oti.uml.loader
 
 import org.omg.oti.uml.canonicalXMI._
-import org.omg.oti.uml.xmi._
-import org.omg.oti.uml.write.api._
-import org.omg.oti.uml.read.api._
-import org.omg.oti.uml.read.operations._
-import scala.util.{Failure, Success, Try}
-import scala.xml.{Document => XMLDocument, _}
 import org.omg.oti.uml.loader.DocumentLoader
-import java.net.URL
+import org.omg.oti.uml.read.api._
+import org.omg.oti.uml.write.api._
+import org.omg.oti.uml.xmi._
 
+import scala.{Option, None, Some, StringContext}
+import scala.collection.immutable._
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
+import scala.util.{Failure, Success, Try}
+import scala.Predef.classOf
+
+import java.net.URL
+import java.lang.IllegalArgumentException
+
 
 trait Load2[Uml <: UML] {
-  
+
   val loadCL = classOf[Load2[Uml]].getClassLoader
   val modelPath1 = "resources/loadTests/SysML.xmi"
   val modelPath2 = "loadTests/SysML.xmi"
@@ -67,20 +71,20 @@ trait Load2[Uml <: UML] {
       case None =>
         throw new IllegalArgumentException(s"Cannot find model file!")
     }
-     
+
   def url2loadURL
   (url: URL)
   (implicit loader: DocumentLoader[Uml])
   : Uml#LoadURL
-  
+
   def load
-  (ds: DocumentSet[Uml])  
-  (implicit 
-      loader: DocumentLoader[Uml],
-      umlF: UMLFactory[Uml],
-      umlU: UMLUpdate[Uml],
-      nodeT: TypeTag[Document[Uml]],
-      edgeT: TypeTag[DocumentEdge[Document[Uml]]])
+  (ds: DocumentSet[Uml])
+  (implicit
+   loader: DocumentLoader[Uml],
+   umlF: UMLFactory[Uml],
+   umlU: UMLUpdate[Uml],
+   nodeT: TypeTag[Document[Uml]],
+   edgeT: TypeTag[DocumentEdge[Document[Uml]]])
   : Try[(SerializableDocument[Uml], DocumentSet[Uml])] =
     loader.loadDocument(url2loadURL(modelURL), ds)
 }

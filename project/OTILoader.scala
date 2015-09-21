@@ -88,12 +88,38 @@ object OTILoader extends Build {
         % Versions.oti_canonicalXMI_version withSources() withJavadoc()
       ),
 
-      scalacOptions ++= List("-target:jvm-1.7", "-feature"),
-      scalacOptions in (Compile,doc) ++= Seq(
+      scalacOptions ++= List("-target:jvm-1.7"),
+
+      // https://tpolecat.github.io/2014/04/11/scalac-flags.html
+      scalacOptions ++= Seq(
+        "-deprecation",
+        "-encoding", "UTF-8", // yes, this is 2 args
+        "-feature",
+        "-language:existentials",
+        "-language:higherKinds",
+        "-language:implicitConversions",
+        "-unchecked",
+        "-Xfatal-warnings",
+        "-Xlint",
+        "-Yno-adapted-args",
+        "-Ywarn-dead-code", // N.B. doesn't work well with the ??? hole
+        "-Ywarn-numeric-widen",
+        "-Ywarn-value-discard",
+        "-Xfuture",
+        "-Ywarn-unused-import", // 2.11 only
+        "-Yno-imports" // no automatic imports at all; all symbols must be imported explicitly
+      ),
+
+      // https://github.com/puffnfresh/wartremover
+      //wartremoverErrors ++= Warts.unsafe,
+      //wartremoverWarnings ++= Warts.all,
+
+      scalacOptions in(Compile, doc) ++= Seq(
         "-diagrams",
         "-doc-title", name.value,
         "-doc-root-content", baseDirectory.value + "/rootdoc.txt"
       ),
+
 
       scalaSource in Compile := baseDirectory.value / "src",
       classDirectory in Compile := baseDirectory.value / "bin",

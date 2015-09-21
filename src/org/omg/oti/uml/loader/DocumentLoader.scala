@@ -39,16 +39,21 @@
  */
 package org.omg.oti.uml.loader
 
-import org.omg.oti.uml._
 import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.read.operations._
 import org.omg.oti.uml.xmi._
+import scala.annotation
+import scala.{Option,None,Some,StringContext,Unit}
+import scala.collection.immutable._
+import scala.collection.Seq
+import scala.Predef.{Set => _, Map => _, _}
 import scala.util.{Failure, Success, Try}
 import scala.xml.{Document => XMLDocument, _}
 import java.io.InputStream
 import java.net.URI
+import java.lang.IllegalArgumentException
 
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
@@ -268,7 +273,7 @@ trait DocumentLoader[Uml <: UML] {
                             case Success(nestedOther) =>
                               processNestedContent(
                                 x2u, xmiE, nestedOther,
-                                more :+(xmiPattern, restContents), references)
+                                more :+ ((xmiPattern, restContents)), references)
                             case Failure(f)           =>
                               Failure(f)
                           }
@@ -338,7 +343,7 @@ trait DocumentLoader[Uml <: UML] {
    xmiReferences: Map[XMIElementDefinition, Seq[Elem]])
   : Try[Unit] =
     if (xmiReferences.isEmpty)
-      Success(Unit)
+      Success(())
     else
       xmi2uml.get(xmiReferences.head._1) match {
         case Some(umlE) =>
@@ -377,7 +382,7 @@ trait DocumentLoader[Uml <: UML] {
     // @todo
     //show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
     //xmiReferences.foreach { ref => show(s"* ref: $ref") }
-    Success(Unit)
+    Success(())
   }
 
   /**
@@ -400,7 +405,7 @@ trait DocumentLoader[Uml <: UML] {
     // @todo
     //show(s"* Update ${tags.size} tags")
     //tags.foreach { t => show(s"* tag: $t") }
-    Success(Unit)
+    Success(())
   }
 
   /**
@@ -421,14 +426,15 @@ trait DocumentLoader[Uml <: UML] {
    attributeName: String,
    attributeValue: String)
   : Try[Unit] =
-    e.fold[Try[Unit]] {
+    e
+    .fold[Try[Unit]] {
       Failure(new IllegalArgumentException(
           s"There should be a UML element corresponding to" +
           s"to $xmiE to update the attribute $attributeName with value $attributeValue"))
     }{ umlElement =>
         // @todo
         show(s"TODO<: update ${xmiE.xmiType}::$attributeName = $attributeValue")
-        Success(Unit)
+        Success(())
     }
 
   /**
@@ -449,16 +455,16 @@ trait DocumentLoader[Uml <: UML] {
   (url: Uml#LoadURL, xmiElements: Seq[Elem])
   (implicit ds: DocumentSet[Uml], umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
   : Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
-    XMIPattern.matchXMIPattern(xmiElements) match {
-      case Some((xmiPattern, xmiTags)) =>
+    XMIPattern.matchXMIPattern(xmiElements)
+    .fold[Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]]{
+      Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
+    } { case ((xmiPattern:XMIPattern, xmiTags: Seq[Elem])) =>
         xmiPattern match {
           case xmiElement: XMIElementDefinition =>
             makeDocumentFromRootNode(url, xmiElement, xmiTags)
           case _                                =>
             Failure(new IllegalArgumentException(s"Not supported: $xmiPattern"))
         }
-      case None                        =>
-        Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
     }
 
   /**
@@ -492,8 +498,10 @@ trait DocumentLoader[Uml <: UML] {
             XMIPattern.lookupElementText("URI")(e)
         })
         .fold(missingURIAttribute)((uri: String) => {
-          umlF.reflectivePackageFactoryLookup.get(xmiType) match {
-            case Some(factory) =>
+          umlF.reflectivePackageFactoryLookup.get(xmiType)
+          .fold[Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]]{
+            Failure(new IllegalArgumentException(s"No Package-based factory found for xmiType=uml:$xmiType"))
+          } { factory =>
               for {
                 root <- factory(umlF)
                 sd <- createSerializableDocumentFromImportedRootPackage(
@@ -505,9 +513,6 @@ trait DocumentLoader[Uml <: UML] {
                 xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
                 xmi2contents = Seq[(XMIElementDefinition, Seq[Elem] )](xmiPattern -> contents)
               } yield (sd, xmi2uml, xmi2contents, tags)
-
-            case None =>
-              Failure(new IllegalArgumentException(s"No Package-based factory found for xmiType=uml:$xmiType"))
           }
         })
 

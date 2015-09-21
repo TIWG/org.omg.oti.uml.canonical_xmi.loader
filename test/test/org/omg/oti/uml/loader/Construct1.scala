@@ -39,10 +39,10 @@
  */
 package test.org.omg.oti.uml.loader
 
-import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
-import org.omg.oti.uml.read.operations._
+import scala.collection.immutable._
+import scala.Some
 import scala.util.Try
 
 /**

@@ -41,8 +41,12 @@ package org.omg.oti.uml.loader
 
 import scala.xml._
 
-import scala.util._
 import scala.xml._
+import scala.annotation
+import scala.{Option,None,Some,StringContext,Unit}
+import scala.collection.immutable._
+import scala.collection.Seq
+import scala.Predef.{Set => _, Map => _, _}
 import java.net.URL
 
 /**
