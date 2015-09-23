@@ -236,23 +236,23 @@ trait DocumentLoader[Uml <: UML] {
                           case Some(mpf) =>
 
                             show(s"* Nested Composite ($mpf) => $xmiE")
-                            (umlU.MetaPropertyReference2LinksUpdate.find(_.links_query == mpf),
-                              umlU.MetaPropertyIterable2LinksUpdate.find(_.links_query == mpf),
-                              umlU.MetaPropertySequence2LinksUpdate.find(_.links_query == mpf),
-                              umlU.MetaPropertySet2LinksUpdate.find(_.links_query == mpf)
+                            (umlU.AssociationMetaPropertyOption2LinksUpdate.find(_.links_query == mpf),
+                              umlU.AssociationMetaPropertyIterable2LinksUpdate.find(_.links_query == mpf),
+                              umlU.AssociationMetaPropertySequence2LinksUpdate.find(_.links_query == mpf),
+                              umlU.AssociationMetaPropertySet2LinksUpdate.find(_.links_query == mpf)
                               ) match {
 
                               case (Some(cru), _, _, _) =>
-                                cru.linksCompose1(umlParent, umlE)
+                                cru.update1Link(umlParent, umlE)
 
                               case (_, Some(cru), _, _) =>
-                                cru.linksCompose1(umlParent, umlE)
+                                cru.update1Link(umlParent, umlE)
 
                               case (_, _, Some(cru), _) =>
-                                cru.linksCompose1(umlParent, umlE)
+                                cru.update1Link(umlParent, umlE)
 
                               case (_, _, _, Some(cru)) =>
-                                cru.linksCompose1(umlParent, umlE)
+                                cru.update1Link(umlParent, umlE)
 
                               case (None, None, None, None) =>
                                 Failure(new IllegalArgumentException(
