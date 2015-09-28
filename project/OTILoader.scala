@@ -67,15 +67,13 @@ object OTILoader extends Build {
 
   val QUALIFIED_NAME = "^[a-zA-Z][\\w_]*(\\.[a-zA-Z][\\w_]*)*$".r
 
-  lazy val oti_loader = Project(
-    "oti-loader",
-    file(".")).
-    enablePlugins(aether.AetherPlugin).
-    enablePlugins(com.typesafe.sbt.packager.universal.UniversalPlugin).
-    enablePlugins(com.timushev.sbt.updates.UpdatesPlugin).
-    settings(otiSettings: _*).
-    settings(commonSettings: _*).
-    settings(
+  lazy val oti_loader = Project("oti-loader", file("."))
+    .enablePlugins(aether.AetherPlugin)
+    .enablePlugins(com.typesafe.sbt.packager.universal.UniversalPlugin)
+    .enablePlugins(com.timushev.sbt.updates.UpdatesPlugin)
+    .settings(otiSettings: _*)
+    .settings(commonSettings: _*)
+    .settings(
       version := Versions.version,
       removeExistingHeaderBlock := true,
       libraryDependencies ++= Seq(
@@ -127,7 +125,8 @@ object OTILoader extends Build {
       classDirectory in Test := baseDirectory.value / "bin.tests",
 
       // the '*-resource.zip' archive will start from: 'dynamicScripts/<dynamicScriptsProjectName>'
-      com.typesafe.sbt.packager.Keys.topLevelDirectory in Universal := Some("dynamicScripts/org.omg.oti.trees"),
+      com.typesafe.sbt.packager.Keys.topLevelDirectory in Universal :=
+        Some("dynamicScripts/org.omg.oti.uml.loader"),
 
       // name the '*-resource.zip' in the same way as other artifacts
       com.typesafe.sbt.packager.Keys.packageName in Universal :=
