@@ -58,6 +58,12 @@ import java.lang.IllegalArgumentException
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
+case class DocumentLoaderException[Uml <: UML]
+( dLoader: DocumentLoader[Uml],
+  message: String,
+  t: java.lang.Throwable )
+  extends java.lang.Exception(message, t)
+
 /**
  * The inverse of the XMI Document production rules
  *
@@ -95,16 +101,22 @@ trait DocumentLoader[Uml <: UML] {
     // Cannonical XMI: B2.2: Always use a root xmi:XMI element
 
     val xmiRoot: Node = XML.load(openExternalDocumentStreamForImport(url))
-    require("XMI" == xmiRoot.label)
+    if ("XMI" != xmiRoot.label)
+      return Failure( DocumentLoaderException(
+        this,
+        s"loadDocument($url) failed",
+        new IllegalArgumentException("Root node must be XMI")))
 
     val namespaces: Map[String, String] =
       XMIPattern.collectNamespaces(xmiRoot)
 
     for {
       ns <- Seq("xmi", "xsi", "uml", "mofext")
-    } require(
-      namespaces.contains(ns),
-      s"'$ns' namespace must be declared in root XMI node")
+    } if (!namespaces.contains(ns))
+      return Failure( DocumentLoaderException(
+        this,
+        s"loadDocument($url) failed",
+        new IllegalArgumentException(s"'$ns' namespace must be declared in root XMI node")))
 
     // there must be at least 1 child, which is a kind of UML Package,
     // Profile or Model subsequent children are XML Element nodes 
@@ -255,16 +267,25 @@ trait DocumentLoader[Uml <: UML] {
                                 cru.update1Link(umlParent, umlE)
 
                               case (None, None, None, None) =>
-                                Failure(new IllegalArgumentException(
-                                  s"No composite meta property update found for" +
-                                  s" '$compositeMetaPropertyName' on $umlParent"))
+                                Failure(
+                                  DocumentLoaderException(
+                                    this,
+                                    s"loadDocument: error in processNestedContent",
+                                    new IllegalArgumentException(
+                                      s"No composite meta property update found for" +
+                                      s" '$compositeMetaPropertyName' on $umlParent")))
+
 
                             }
 
                           case None =>
-                            Failure(new IllegalArgumentException(
-                              s"No composite meta property update found for " +
-                              s"'$compositeMetaPropertyName' on $umlParent"))
+                            Failure(
+                              DocumentLoaderException(
+                                this,
+                                s"loadDocument: error in processNestedContent",
+                                new IllegalArgumentException(
+                                  s"No composite meta property found for " +
+                                  s"'$compositeMetaPropertyName' on $umlParent")))
 
                         }
                       parent2childOK match {
@@ -281,13 +302,21 @@ trait DocumentLoader[Uml <: UML] {
                           Failure(f)
                       }
                     case None            =>
-                      Failure(new IllegalArgumentException(s"There should be an element for $xmiPattern"))
+                      Failure(
+                        DocumentLoaderException(
+                          this,
+                          s"loadDocument: error in processNestedContent",
+                          new IllegalArgumentException(s"There should be an element for $xmiPattern")))
                   }
                 case Failure(t)    =>
                   Failure(t)
               }
             case None          =>
-              Failure(new IllegalArgumentException(s"No factory found for xmiType=uml:$xmiType"))
+              Failure(
+                DocumentLoaderException(
+                  this,
+                  s"loadDocument: error in processNestedContent",
+                  new IllegalArgumentException(s"No factory found for xmiType=uml:$xmiType")))
           }
         case Some((xmiOther, otherElements))                                                         =>
           // @todo
@@ -354,7 +383,11 @@ trait DocumentLoader[Uml <: UML] {
               Failure(t)
           }
         case None       =>
-          Failure(new IllegalArgumentException(s"Missing entry for ${xmiReferences.head._1}"))
+          Failure(
+            DocumentLoaderException(
+              this,
+              s"loadDocument: error in processXMIReferences",
+              new IllegalArgumentException(s"Missing entry for ${xmiReferences.head._1}")))
       }
 
   /**
@@ -463,7 +496,11 @@ trait DocumentLoader[Uml <: UML] {
           case xmiElement: XMIElementDefinition =>
             makeDocumentFromRootNode(url, xmiElement, xmiTags)
           case _                                =>
-            Failure(new IllegalArgumentException(s"Not supported: $xmiPattern"))
+            Failure(
+              DocumentLoaderException(
+                this,
+                s"error in makeDocumentFromRootNode(url=$url, xmiElements)",
+                new IllegalArgumentException(s"Not supported: $xmiPattern")))
         }
     }
 
@@ -500,7 +537,11 @@ trait DocumentLoader[Uml <: UML] {
         .fold(missingURIAttribute)((uri: String) => {
           umlF.reflectivePackageFactoryLookup.get(xmiType)
           .fold[Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]]{
-            Failure(new IllegalArgumentException(s"No Package-based factory found for xmiType=uml:$xmiType"))
+            Failure(
+              DocumentLoaderException(
+                this,
+                s"error in makeDocumentFromRootNode(url=$url, pattern, tags)",
+                new IllegalArgumentException(s"No Package-based factory found for xmiType=uml:$xmiType")))
           } { factory =>
               for {
                 root <- factory(umlF)
@@ -517,7 +558,11 @@ trait DocumentLoader[Uml <: UML] {
         })
 
       case _ =>
-        Failure(new IllegalArgumentException("No Document Root Node found in the XML!"))
+        Failure(
+          DocumentLoaderException(
+            this,
+            s"error in makeDocumentFromRootNode(url=$url, pattern, tags)",
+            new IllegalArgumentException("No Document Root Node found in the XML!")))
     }
 
   /**
@@ -528,6 +573,10 @@ trait DocumentLoader[Uml <: UML] {
    */
   protected def missingURIAttribute
   : Try[(SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])] =
-    Failure(new IllegalArgumentException(s"Missing URI attribute for root element"))
+    Failure(
+      DocumentLoaderException(
+        this,
+        s"missingURIAttribute",
+        new IllegalArgumentException(s"Missing URI attribute for root element")))
 
 }
