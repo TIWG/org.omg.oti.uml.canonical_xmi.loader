@@ -20,7 +20,7 @@ object Versions {
   // OTI Core version
     
   val oti_core_prefix = version_prefix
-  val oti_core_suffix = "444972"
+  val oti_core_suffix = "444983"
   val oti_core_version = oti_core_prefix+"-"+oti_core_suffix
 
   // OTI Canonical XMI version
