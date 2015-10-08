@@ -62,7 +62,15 @@ case class DocumentLoaderException[Uml <: UML]
 ( dLoader: DocumentLoader[Uml],
   message: String,
   t: java.lang.Throwable )
-  extends java.lang.Exception(message, t)
+  extends java.lang.Exception(message, t) {
+
+  /**
+   * This type member is intended to facilitate pattern matching
+   * using a wildcard for the type parameter, i.e., DocumentLoaderException[_]
+   * The type information can then be checked using the UmlType member.
+   */
+  type UmlType = Uml
+}
 
 /**
  * The inverse of the XMI Document production rules
