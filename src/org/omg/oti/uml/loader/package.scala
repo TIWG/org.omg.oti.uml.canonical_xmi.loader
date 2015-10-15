@@ -37,41 +37,19 @@
  *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package test.org.omg.oti.uml.loader
+package org.omg.oti.uml
 
-import org.omg.oti.uml.UMLError
-import org.omg.oti.uml.write.api._
-import org.omg.oti.uml.read.api._
-import scala.collection.immutable._
-import scala.Some
-import scalaz._
+import org.omg.oti.uml.read.api.UML
+import scala.{Option,None}
+import scala.Predef.String
 
-/**
- * Construct some OMG UML 2.5 models using the OTI API.
- * These examples illustrate the tool-neutral OTI API in the sense
- * that they can be executed on a particular OMG UML 2.5 compliant modeling tool
- * via a corresponding tool-specific OTI adapter.
- */
-trait Construct1[Uml <: UML] extends ConstructionTest[Uml] {
-  
-  import umlF._
-  
-  /**
-   * A toplevel package with two nested packages.
-   */
-  override def make
-  : \/[NonEmptyList[UMLError.UException], UMLPackage[Uml]] =
-    for {
-      top <- createUMLPackage.disjunction
-      _ = top.setName( Some("Top") ).disjunction
-      
-      p1 <- createUMLPackage.disjunction
-      _ = p1.setName( Some("P1") ).disjunction
-      
-      p2 <- createUMLPackage.disjunction
-      _ = p2.setName( Some("P2") ).disjunction
-      
-      _ = top.links_Package_owningPackage_compose_packagedElement_PackageableElement( Set(p1, p2) ).disjunction
-      
-    } yield top
+package object loader {
+
+  def documentLoaderException[Uml <: UML]
+  ( dLoader: DocumentLoader[Uml],
+    message: String,
+    cause: Option[java.lang.Throwable]=None )
+  : UMLError.UException
+  = new DocumentLoaderException(dLoader, message, cause)
+
 }

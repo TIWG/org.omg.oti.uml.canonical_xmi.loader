@@ -1,3 +1,11 @@
+// https://github.com/lrytz/experimental-backend-2.11/blob/master/build.sbt
+resolvers ++= List(
+  "2.11.7 core"    at "https://oss.sonatype.org/content/repositories/orgscala-lang-1229/",
+  "2.11.7 plugins" at "https://oss.sonatype.org/content/repositories/orgscala-lang-1230/org/"
+)
+
+
+
 
 resolvers += Resolver.url("sbt-license-plugin-releases", url("http://dl.bintray.com/banno/oss"))(Resolver.ivyStylePatterns)
 
@@ -30,3 +38,9 @@ addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.1.8")
 
 // https://github.com/sbt/sbt-native-packager
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.0.2")
+
+// https://github.com/puffnfresh/wartremover
+addSbtPlugin("org.brianmckenna" % "sbt-wartremover" % "0.14")
+
+// https://github.com/sksamuel/sbt-scapegoat
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.0")

@@ -39,6 +39,7 @@
  */
 package test.org.omg.oti.uml.loader
 
+import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.loader.DocumentLoader
 import org.omg.oti.uml.read.api._
@@ -49,7 +50,7 @@ import scala.{Option, None, Some, StringContext}
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
-import scala.util.{Failure, Success, Try}
+import scalaz._
 import scala.Predef.classOf
 
 import java.net.URL
@@ -85,6 +86,6 @@ trait Load2[Uml <: UML] {
    umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : Try[(SerializableDocument[Uml], DocumentSet[Uml])] =
+  : \/[NonEmptyList[UMLError.UException], (SerializableDocument[Uml], DocumentSet[Uml])] =
     loader.loadDocument(url2loadURL(modelURL), ds)
 }
