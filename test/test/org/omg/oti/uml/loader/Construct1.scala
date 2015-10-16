@@ -43,8 +43,7 @@ import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
 import scala.collection.immutable._
-import scala.Some
-import scalaz._
+import scalaz._, Scalaz._
 
 /**
  * Construct some OMG UML 2.5 models using the OTI API.
@@ -62,16 +61,16 @@ trait Construct1[Uml <: UML] extends ConstructionTest[Uml] {
   override def make
   : \/[NonEmptyList[UMLError.UException], UMLPackage[Uml]] =
     for {
-      top <- createUMLPackage.disjunction
-      _ = top.setName( Some("Top") ).disjunction
+      top <- createUMLPackage
+      _ = top.setName( "Top".some )
       
-      p1 <- createUMLPackage.disjunction
-      _ = p1.setName( Some("P1") ).disjunction
+      p1 <- createUMLPackage
+      _ = p1.setName( "P1".some )
       
-      p2 <- createUMLPackage.disjunction
-      _ = p2.setName( Some("P2") ).disjunction
+      p2 <- createUMLPackage
+      _ = p2.setName( "P2".some )
       
-      _ = top.links_Package_owningPackage_compose_packagedElement_PackageableElement( Set(p1, p2) ).disjunction
+      _ = top.links_Package_owningPackage_compose_packagedElement_PackageableElement( Set(p1, p2) )
       
     } yield top
 }

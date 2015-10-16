@@ -307,7 +307,6 @@ trait DocumentLoader[Uml <: UML] {
                   s"No factory found for xmiType=uml:$xmiType")))
           ){ factory =>
               factory(umlF)
-              .disjunction
               .flatMap{ umlE =>
                   xmi2uml
                   .get(xmiPattern)
@@ -321,7 +320,7 @@ trait DocumentLoader[Uml <: UML] {
                   ){ umlParent =>
                       val x2u = xmi2uml + (xmiE -> umlE)
                       val compositeMetaPropertyName = xmiE.element.label
-                      val parent2childOK: ValidationNel[UMLError.UException, Unit] =
+                      val parent2childOK: \/[NonEmptyList[UMLError.UException], Unit] =
                         umlParent.compositeMetaProperties.find((mpf) =>
                           mpf.propertyName == compositeMetaPropertyName &&
                           mpf.domainType.runtimeClass.isInstance(umlParent) &&
@@ -349,26 +348,27 @@ trait DocumentLoader[Uml <: UML] {
                                 cru.update1Link(umlParent, umlE)
 
                               case (None, None, None, None) =>
-                                documentLoaderException(
-                                  this,
-                                  s"loadDocument: error in processNestedContent: " +
-                                  s"No composite meta property update found for" +
-                                  s" '$compositeMetaPropertyName' on $umlParent")
-                                .failureNel
+                                NonEmptyList(
+                                  documentLoaderException(
+                                    this,
+                                    s"loadDocument: error in processNestedContent: " +
+                                    s"No composite meta property update found for" +
+                                    s" '$compositeMetaPropertyName' on $umlParent"))
+                                .left
 
                             }
 
                           case None =>
-                            documentLoaderException(
-                              this,
-                              s"loadDocument: error in processNestedContent: " +
-                              s"No composite meta property found for " +
-                              s"'$compositeMetaPropertyName' on $umlParent")
-                            .failureNel
+                            NonEmptyList(
+                              documentLoaderException(
+                                this,
+                                s"loadDocument: error in processNestedContent: " +
+                                s"No composite meta property found for " +
+                                s"'$compositeMetaPropertyName' on $umlParent"))
+                            .left
 
                         }
                       parent2childOK
-                      .disjunction
                       .flatMap { _ =>
                           processAttributes(x2u, xmiE, nestedContents, Seq())
                           .flatMap { nestedOther =>
@@ -610,7 +610,6 @@ trait DocumentLoader[Uml <: UML] {
                   s"error in makeDocumentFromRootNode(url=$url, pattern, tags): No Package-based factory found for xmiType=uml:$xmiType")))
           } { factory =>
               factory(umlF)
-              .disjunction
               .flatMap { root =>
                 createSerializableDocumentFromImportedRootPackage(
                   uri = new java.net.URI(uri),
