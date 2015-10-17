@@ -52,6 +52,6 @@ trait ConstructionTest[Uml <: UML] {
   val umlF: UMLFactory[Uml]  
   implicit val umlU: UMLUpdate[Uml]
     
-  def make: \/[NonEmptyList[UMLError.UException], UMLPackage[Uml]]
+  def make: NonEmptyList[UMLError.UException] \/ UMLPackage[Uml]
   
 }

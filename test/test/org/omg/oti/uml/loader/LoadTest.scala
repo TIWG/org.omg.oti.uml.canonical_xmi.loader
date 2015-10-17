@@ -54,6 +54,6 @@ trait LoadTest[Uml <: UML] {
   val umlF: UMLFactory[Uml]  
   implicit val umlU: UMLUpdate[Uml]
     
-  def load: \/[NonEmptyList[UMLError.UException], UMLPackage[Uml]]
+  def load: NonEmptyList[UMLError.UException] \/ UMLPackage[Uml]
   
 }

@@ -69,7 +69,7 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
         .apply(Option.apply(loadCL.getResource(path)))
     }
     .headOption
-    .fold[\/[NonEmptyList[UMLError.UException], java.net.URL]](
+    .fold[NonEmptyList[UMLError.UException] \/ java.net.URL](
       NonEmptyList(
         documentLoaderException(
           loader,
@@ -81,10 +81,10 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
     }
      
   def makeRootPackage(xmiLabel: String)
-  : \/[NonEmptyList[UMLError.UException], UMLPackage[Uml]]
+  : NonEmptyList[UMLError.UException] \/ UMLPackage[Uml]
   
   override def load
-  : \/[NonEmptyList[UMLError.UException], UMLPackage[Uml]] = {
+  : NonEmptyList[UMLError.UException] \/ UMLPackage[Uml] = {
 
     modelURL
       .flatMap { url: java.net.URL =>
@@ -95,7 +95,7 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
           classOf[org.xml.sax.SAXException]
         )
           .either(XML.load(url.openStream()))
-          .fold[\/[NonEmptyList[UMLError.UException], UMLPackage[Uml]]](
+          .fold[NonEmptyList[UMLError.UException] \/ UMLPackage[Uml]](
 
           (cause: java.lang.Throwable) =>
             -\/(NonEmptyList(documentLoaderException(

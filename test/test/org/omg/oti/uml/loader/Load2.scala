@@ -86,6 +86,6 @@ trait Load2[Uml <: UML] {
    umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : \/[NonEmptyList[UMLError.UException], (SerializableDocument[Uml], DocumentSet[Uml])] =
+  : NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], DocumentSet[Uml]) =
     loader.loadDocument(url2loadURL(modelURL), ds)
 }
