@@ -49,7 +49,7 @@ package object loader {
   ( dLoader: DocumentLoader[Uml],
     message: String,
     cause: Option[java.lang.Throwable]=None )
-  : UMLError.UException
+  : java.lang.Throwable
   = new DocumentLoaderException(dLoader, message, cause)
 
 }

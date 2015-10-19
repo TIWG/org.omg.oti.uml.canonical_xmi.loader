@@ -39,7 +39,6 @@
  */
 package test.org.omg.oti.uml.loader
 
-import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
 import scalaz.{NonEmptyList, \/}
@@ -52,6 +51,6 @@ trait ConstructionTest[Uml <: UML] {
   val umlF: UMLFactory[Uml]  
   implicit val umlU: UMLUpdate[Uml]
     
-  def make: NonEmptyList[UMLError.UException] \/ UMLPackage[Uml]
+  def make: NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
   
 }

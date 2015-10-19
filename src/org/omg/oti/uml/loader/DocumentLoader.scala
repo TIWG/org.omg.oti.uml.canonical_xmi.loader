@@ -105,7 +105,7 @@ trait DocumentLoader[Uml <: UML] {
   (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], DocumentSet[Uml]) = {
+  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml]) = {
 
     openExternalDocumentStreamForImport(url)
       .flatMap { is =>
@@ -118,7 +118,7 @@ trait DocumentLoader[Uml <: UML] {
           classOf[org.xml.sax.SAXException]
         )
         .either(XML.load(is))
-        .fold[NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], DocumentSet[Uml])](
+        .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml])](
 
           (cause: java.lang.Throwable) =>
             -\/(NonEmptyList(documentLoaderException(
@@ -135,9 +135,9 @@ trait DocumentLoader[Uml <: UML] {
             else {
               val namespaces: Map[String, String] = XMIPattern.collectNamespaces(xmiRoot)
 
-              val ns0: NonEmptyList[UMLError.UException] \/ Unit =
+              val ns0: NonEmptyList[java.lang.Throwable] \/ Unit =
                 \/-(())
-              val nsN: NonEmptyList[UMLError.UException] \/ Unit =
+              val nsN: NonEmptyList[java.lang.Throwable] \/ Unit =
                 (ns0 /: Seq("xmi", "xsi", "uml", "mofext")) { (nsi, ns) =>
                   nsi +++
                     (if (!namespaces.contains(ns))
@@ -149,7 +149,7 @@ trait DocumentLoader[Uml <: UML] {
                 }
 
               nsN
-              .flatMap[NonEmptyList[UMLError.UException], (SerializableDocument[Uml], DocumentSet[Uml])] { _ =>
+              .flatMap[NonEmptyList[java.lang.Throwable], (SerializableDocument[Uml], DocumentSet[Uml])] { _ =>
 
                 // there must be at least 1 child, which is a kind of UML Package,
                 // Profile or Model subsequent children are XML Element nodes
@@ -160,7 +160,7 @@ trait DocumentLoader[Uml <: UML] {
                 implicit val _ds = ds
 
                 makeDocumentFromRootNode(url, xmiElements)
-                .flatMap[NonEmptyList[UMLError.UException], (SerializableDocument[Uml], DocumentSet[Uml])] {
+                .flatMap[NonEmptyList[java.lang.Throwable], (SerializableDocument[Uml], DocumentSet[Uml])] {
 
                   case (document: SerializableDocument[Uml],
                   xmi2umlRoot: XMI2UMLElementMap,
@@ -214,7 +214,7 @@ trait DocumentLoader[Uml <: UML] {
    xmi2contents1: Seq[(XMIElementDefinition, Seq[Elem])],
    references: Map[XMIElementDefinition, Seq[Elem]])
   (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ (XMI2UMLElementMap, Map[XMIElementDefinition, Seq[Elem]]) =
+  : NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Map[XMIElementDefinition, Seq[Elem]]) =
     if (xmi2contents1.isEmpty)
       \/-((xmi2uml1, references))
     else
@@ -240,7 +240,7 @@ trait DocumentLoader[Uml <: UML] {
    content: Seq[Elem],
    other: Seq[Elem])
   (implicit umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ Seq[Elem] =
+  : NonEmptyList[java.lang.Throwable] \/ Seq[Elem] =
     if (content.isEmpty)
       \/-(other)
     else
@@ -279,7 +279,7 @@ trait DocumentLoader[Uml <: UML] {
    more: Seq[(XMIElementDefinition, Seq[Elem])],
    references: Map[XMIElementDefinition, Seq[Elem]])
   (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])]) =
+  : NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])]) =
     if (content.isEmpty)
       if (more.isEmpty)
         \/-((xmi2uml, references.toSeq))
@@ -288,7 +288,7 @@ trait DocumentLoader[Uml <: UML] {
     else
       XMIPattern
       .matchXMIPattern(content)
-      .fold[NonEmptyList[UMLError.UException] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])]({
+      .fold[NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])]({
         val xmiReferences = references.getOrElse(xmiPattern, Seq()) :+ content.head
         processNestedContent(
           xmi2uml, xmiPattern, content.tail,
@@ -298,7 +298,7 @@ trait DocumentLoader[Uml <: UML] {
           umlF
           .reflectiveFactoryLookup
           .get(xmiType)
-          .fold[NonEmptyList[UMLError.UException] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])](
+          .fold[NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])](
             -\/(
               NonEmptyList(
                 documentLoaderException(
@@ -310,7 +310,7 @@ trait DocumentLoader[Uml <: UML] {
               .flatMap{ umlE =>
                   xmi2uml
                   .get(xmiPattern)
-                  .fold[NonEmptyList[UMLError.UException] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])](
+                  .fold[NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])](
                     -\/(
                       NonEmptyList(
                         documentLoaderException(
@@ -320,7 +320,7 @@ trait DocumentLoader[Uml <: UML] {
                   ){ umlParent =>
                       val x2u = xmi2uml + (xmiE -> umlE)
                       val compositeMetaPropertyName = xmiE.element.label
-                      val parent2childOK: NonEmptyList[UMLError.UException] \/ Unit =
+                      val parent2childOK: NonEmptyList[java.lang.Throwable] \/ Unit =
                         umlParent.compositeMetaProperties.find((mpf) =>
                           mpf.propertyName == compositeMetaPropertyName &&
                           mpf.domainType.runtimeClass.isInstance(umlParent) &&
@@ -406,7 +406,7 @@ trait DocumentLoader[Uml <: UML] {
   (xmiPattern: XMIElementDefinition,
    attributesAndOther: Seq[Elem])
   (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])]) =
+  : NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])]) =
     processAttributes(xmi2uml, xmiPattern, attributesAndOther, Seq())
     .flatMap { otherContent =>
       processNestedContent(xmi2uml, xmiPattern, otherContent, Seq(), Map())
@@ -428,13 +428,13 @@ trait DocumentLoader[Uml <: UML] {
    xmi2uml: XMI2UMLElementMap,
    xmiReferences: Map[XMIElementDefinition, Seq[Elem]])
   (implicit umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ Unit =
+  : NonEmptyList[java.lang.Throwable] \/ Unit =
     if (xmiReferences.isEmpty)
       \/-(())
     else
       xmi2uml
       .get(xmiReferences.head._1)
-      .fold[NonEmptyList[UMLError.UException] \/ Unit](
+      .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
         -\/(NonEmptyList(
           documentLoaderException(
             this,
@@ -468,7 +468,7 @@ trait DocumentLoader[Uml <: UML] {
    umlElement: UMLElement[Uml],
    xmiReferences: Seq[Elem])
   (implicit umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ Unit = {
+  : NonEmptyList[java.lang.Throwable] \/ Unit = {
     // @todo
     //show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
     //xmiReferences.foreach { ref => show(s"* ref: $ref") }
@@ -491,7 +491,7 @@ trait DocumentLoader[Uml <: UML] {
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap,
    tags: Seq[Elem])
-  : NonEmptyList[UMLError.UException] \/ Unit = {
+  : NonEmptyList[java.lang.Throwable] \/ Unit = {
     // @todo
     //show(s"* Update ${tags.size} tags")
     //tags.foreach { t => show(s"* tag: $t") }
@@ -516,9 +516,9 @@ trait DocumentLoader[Uml <: UML] {
    attributeName: String,
    attributeValue: String)
   (implicit umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ Unit =
+  : NonEmptyList[java.lang.Throwable] \/ Unit =
     e
-    .fold[NonEmptyList[UMLError.UException] \/ Unit] {
+    .fold[NonEmptyList[java.lang.Throwable] \/ Unit] {
       -\/(
         NonEmptyList(
           UMLError
@@ -549,9 +549,9 @@ trait DocumentLoader[Uml <: UML] {
   def makeDocumentFromRootNode
   (url: Uml#LoadURL, xmiElements: Seq[Elem])
   (implicit ds: DocumentSet[Uml], umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
+  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
     XMIPattern.matchXMIPattern(xmiElements)
-    .fold[NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
+    .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
       -\/(
         NonEmptyList(
           documentLoaderException(
@@ -589,7 +589,7 @@ trait DocumentLoader[Uml <: UML] {
   def makeDocumentFromRootNode
   (url: Uml#LoadURL, pattern: XMIElementDefinition, tags: Seq[Elem])
   (implicit ds: DocumentSet[Uml], umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
+  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
     pattern match {
       case xmiPattern@
         XMIElementDefinition(e, xmiID, xmiUUID, xmiType, Some(MOFExtTagNSPrefix(_, nsPrefix, _)), contents) =>
@@ -602,7 +602,7 @@ trait DocumentLoader[Uml <: UML] {
         })
         .fold(missingURIAttribute)((uri: String) => {
           umlF.reflectivePackageFactoryLookup.get(xmiType)
-          .fold[NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
+          .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
             -\/(
               NonEmptyList(
                 documentLoaderException(
@@ -642,7 +642,7 @@ trait DocumentLoader[Uml <: UML] {
    *         (it should be really a kind of UML Package)
    */
   protected def missingURIAttribute
-  : NonEmptyList[UMLError.UException] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
+  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
     -\/(
       NonEmptyList(
         documentLoaderException(

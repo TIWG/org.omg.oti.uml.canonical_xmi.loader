@@ -39,7 +39,6 @@
  */
 package test.org.omg.oti.uml.loader
 
-import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.loader.DocumentLoader
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
@@ -54,6 +53,6 @@ trait LoadTest[Uml <: UML] {
   val umlF: UMLFactory[Uml]  
   implicit val umlU: UMLUpdate[Uml]
     
-  def load: NonEmptyList[UMLError.UException] \/ UMLPackage[Uml]
+  def load: NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
   
 }
