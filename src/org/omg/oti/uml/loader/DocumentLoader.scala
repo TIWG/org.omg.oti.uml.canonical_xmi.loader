@@ -62,7 +62,7 @@ import java.lang.IllegalArgumentException
 class DocumentLoaderException[Uml <: UML]
 ( dLoader: DocumentLoader[Uml],
   message: String,
-  cause: Option[java.lang.Throwable]=None )
+  cause: UMLError.OptionThrowableNel = UMLError.emptyThrowableNel)
   extends UMLError.UException(message, cause) {
 
   /**
@@ -124,7 +124,7 @@ trait DocumentLoader[Uml <: UML] {
             -\/(NonEmptyList(documentLoaderException(
               this,
               s"loadDocument($url) failed: ${cause.getMessage}",
-              cause.some))),
+              cause))),
 
           (xmiRoot: scala.xml.Node) =>
             // Cannonical XMI: B2.2: Always use a root xmi:XMI element

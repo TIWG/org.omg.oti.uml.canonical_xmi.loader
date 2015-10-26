@@ -101,7 +101,7 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
             -\/(NonEmptyList(documentLoaderException(
               loader,
               s"loadDocument($url) failed: ${cause.getMessage}",
-              cause.some))),
+              cause))),
 
           (xmiRoot: scala.xml.Node) => {
             // Cannonical XMI: B2.2: Always use a root xmi:XMI element

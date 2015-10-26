@@ -40,16 +40,23 @@
 package org.omg.oti.uml
 
 import org.omg.oti.uml.read.api.UML
-import scala.{Option,None}
 import scala.Predef.String
+import scalaz._, Scalaz._
 
 package object loader {
 
   def documentLoaderException[Uml <: UML]
   ( dLoader: DocumentLoader[Uml],
     message: String,
-    cause: Option[java.lang.Throwable]=None )
+    cause: UMLError.OptionThrowableNel = UMLError.emptyThrowableNel)
   : java.lang.Throwable
   = new DocumentLoaderException(dLoader, message, cause)
+
+  def documentLoaderException[Uml <: UML]
+  ( dLoader: DocumentLoader[Uml],
+    message: String,
+    cause: java.lang.Throwable )
+  : java.lang.Throwable
+  = new DocumentLoaderException(dLoader, message, cause.wrapNel.some)
 
 }
