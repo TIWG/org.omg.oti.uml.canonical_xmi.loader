@@ -40,6 +40,7 @@
 package org.omg.oti.uml.loader
 
 import org.omg.oti.uml.UMLError
+import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
@@ -611,10 +612,14 @@ trait DocumentLoader[Uml <: UML] {
           } { factory =>
               factory(umlF)
               .flatMap { root =>
+                val info = OTISpecificationRootCharacteristics(
+                  packageURI=uri,
+                  documentURL=uri, // @todo Need a conversion function from LoadURL => url for OTI Spec. Root Characteristics
+                  artifactKind=OTISerializableModelLibraryArtifactKind(),
+                  nsPrefix=nsPrefix,
+                  uuidPrefix=nsPrefix) // @todo review this
                 createSerializableDocumentFromImportedRootPackage(
-                  uri = new java.net.URI(uri),
-                  nsPrefix = nsPrefix,
-                  uuidPrefix = nsPrefix,
+                  info,
                   documentURL = url,
                   scope = root)
                   .flatMap { sd =>
