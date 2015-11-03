@@ -612,22 +612,26 @@ trait DocumentLoader[Uml <: UML] {
           } { factory =>
               factory(umlF)
               .flatMap { root =>
-                val info = OTISpecificationRootCharacteristics(
-                  packageURI=uri,
-                  documentURL=uri, // @todo Need a conversion function from LoadURL => url for OTI Spec. Root Characteristics
-                  artifactKind=OTISerializableModelLibraryArtifactKind(),
-                  nsPrefix=nsPrefix,
-                  uuidPrefix=nsPrefix) // @todo review this
-                createSerializableDocumentFromImportedRootPackage(
-                  info,
-                  documentURL = url,
-                  scope = root)
-                  .flatMap { sd =>
+                getExternalDocumentURL(url)
+                .flatMap { externalURI =>
 
-                    val xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
-                    val xmi2contents = Seq[(XMIElementDefinition, Seq[Elem])](xmiPattern -> contents)
-                    \/-((sd, xmi2uml, xmi2contents, tags))
-                  }
+                  val info = OTISpecificationRootCharacteristics(
+                    packageURI = uri,
+                    documentURL = externalURI.toString,
+                    artifactKind = OTISerializableModelLibraryArtifactKind(),
+                    nsPrefix = nsPrefix,
+                    uuidPrefix = nsPrefix) // @todo review this
+                  createSerializableDocumentFromImportedRootPackage(
+                    info,
+                    documentURL = url,
+                    root)
+                    .flatMap { sd =>
+
+                      val xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
+                      val xmi2contents = Seq[(XMIElementDefinition, Seq[Elem])](xmiPattern -> contents)
+                      \/-((sd, xmi2uml, xmi2contents, tags))
+                    }
+                }
               }
           }
         })
