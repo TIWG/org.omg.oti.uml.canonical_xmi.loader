@@ -56,10 +56,6 @@ import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 import scalaz._, Scalaz._
 
-import java.io.InputStream
-import java.net.URI
-import java.lang.IllegalArgumentException
-
 class DocumentLoaderException[Uml <: UML]
 ( dLoader: DocumentLoader[Uml],
   message: String,
@@ -113,11 +109,7 @@ trait DocumentLoader[Uml <: UML] {
 
         import scala.util.control.Exception._
 
-        catching(
-          classOf[java.io.IOException],
-          classOf[java.lang.IllegalArgumentException],
-          classOf[org.xml.sax.SAXException]
-        )
+        nonFatalCatch
         .either(XML.load(is))
         .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml])](
 
