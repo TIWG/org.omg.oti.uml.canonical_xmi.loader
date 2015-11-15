@@ -39,6 +39,7 @@
  */
 package org.omg.oti.uml.loader
 
+import org.omg.oti.uml.OTIPrimitiveTypes._
 import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.canonicalXMI._
@@ -608,11 +609,11 @@ trait DocumentLoader[Uml <: UML] {
                 .flatMap { externalURI =>
 
                   val info = OTISpecificationRootCharacteristics(
-                    packageURI = uri,
-                    documentURL = externalURI.toString,
+                    packageURI = OTI_URI(uri),
+                    documentURL = OTI_URL(externalURI.toString),
                     artifactKind = OTISerializableModelLibraryArtifactKind(),
-                    nsPrefix = nsPrefix,
-                    uuidPrefix = nsPrefix) // @todo review this
+                    nsPrefix = OTI_NS_PREFIX(nsPrefix),
+                    uuidPrefix = OTI_UUID_PREFIX(nsPrefix)) // @todo review this
                   createSerializableDocumentFromImportedRootPackage(
                     info,
                     documentURL = url,
