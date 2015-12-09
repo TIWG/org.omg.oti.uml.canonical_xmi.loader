@@ -71,6 +71,12 @@ class DocumentLoaderException[Uml <: UML]
   type UmlType = Uml
 }
 
+object DocumentLoader {
+  
+  def show(message: String): Unit =
+    System.out.println(message)
+    
+}
 /**
  * The inverse of the XMI Document production rules
  *
@@ -201,7 +207,7 @@ trait DocumentLoader[Uml <: UML] {
    * @param umlU The tool-specific OTI UML Update
    * @return
    */
-  /* @annotation.tailrec */ private def processXMIContents
+  @annotation.tailrec private def processXMIContents
   (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml])
   (xmi2uml1: XMI2UMLElementMap,
@@ -213,9 +219,11 @@ trait DocumentLoader[Uml <: UML] {
       \/-((xmi2uml1, references))
     else
       (processXMIElementAttributesAndNestedContent(d, ds, xmi2uml1) _)
-      .tupled(xmi2contents1.head)
-      .flatMap {
-        case (xmi2uml2: XMI2UMLElementMap, xmiReferences: Seq[(XMIElementDefinition, Seq[Elem])]) =>
+      .tupled(xmi2contents1.head) match {
+        case -\/(nels) =>
+          -\/(nels)
+        
+        case \/-((xmi2uml2: XMI2UMLElementMap, xmiReferences: Seq[(XMIElementDefinition, Seq[Elem])])) =>
           processXMIContents(d, ds)(xmi2uml2, xmi2contents1.tail, references ++ xmiReferences)
       }
 
@@ -228,7 +236,7 @@ trait DocumentLoader[Uml <: UML] {
    * @param other Nested XMI cross-references for the XMI tree element
    * @return The nested XMI cross-references from the input `content` and `other`
    */
-  /* @annotation.tailrec */ final def processAttributes
+  @annotation.tailrec final def processAttributes
   (xmi2uml: XMI2UMLElementMap,
    xmiP: XMIElementDefinition,
    content: Seq[Elem],
@@ -242,9 +250,11 @@ trait DocumentLoader[Uml <: UML] {
         case Some(attributeValue) =>
           // check intermediate computations that may fail and 
           // ensure the recursive call is in the last position
-          updateElementAttribute(xmiP, xmi2uml.get(xmiP), content.head.label, attributeValue)
-          .flatMap { _ =>
-            processAttributes(xmi2uml, xmiP, content.tail, other)
+          updateElementAttribute(xmiP, xmi2uml.get(xmiP), content.head.label, attributeValue) match {
+            case -\/(nels) =>
+              -\/(nels)
+            case \/-(_) =>
+              processAttributes(xmi2uml, xmiP, content.tail, other)
           }
         case None                 =>
           processAttributes(xmi2uml, xmiP, content.tail, other :+ content.head)
@@ -266,7 +276,7 @@ trait DocumentLoader[Uml <: UML] {
    * @return The XMI elements mapped to UML elements (composite nesting) and the XMI cross-references to be processed
    *         in a subsequent phase
    */
-  /* @annotation.tailrec */ final def processNestedContent
+  @annotation.tailrec final def processNestedContent
   (xmi2uml: XMI2UMLElementMap,
    xmiPattern: XMIElementDefinition,
    content: Seq[Elem],
@@ -280,38 +290,37 @@ trait DocumentLoader[Uml <: UML] {
       else
         processNestedContent(xmi2uml, more.head._1, more.head._2, more.tail, references)
     else
-      XMIPattern
-      .matchXMIPattern(content)
-      .fold[NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])]({
+      XMIPattern.matchXMIPattern(content) match {
+      case None =>
         val xmiReferences = references.getOrElse(xmiPattern, Seq()) :+ content.head
         processNestedContent(
           xmi2uml, xmiPattern, content.tail,
           more, references.updated(xmiPattern, xmiReferences))
-      }){
-        case (xmiE@XMIElementDefinition(e, xmiID, xmiUUID, xmiType, nsPrefix, nestedContents), restContents) =>
+      case Some((xmiE@XMIElementDefinition(e, xmiID, xmiUUID, xmiType, nsPrefix, nestedContents), restContents)) =>
           umlF
           .reflectiveFactoryLookup
-          .get(xmiType)
-          .fold[NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])](
+          .get(xmiType) match {
+            case None =>
             -\/(
               NonEmptyList(
                 documentLoaderException(
                   this,
                   s"loadDocument: error in processNestedContent: "+
                   s"No factory found for xmiType=uml:$xmiType")))
-          ){ factory =>
-              factory(umlF)
-              .flatMap{ umlE =>
-                  xmi2uml
-                  .get(xmiPattern)
-                  .fold[NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])])](
+            case Some(factory) =>
+              factory(umlF) match {
+                case -\/(nels) =>
+                  -\/(nels)
+                case \/-(umlE) =>
+                  xmi2uml.get(xmiPattern) match {
+                    case None =>
                     -\/(
                       NonEmptyList(
                         documentLoaderException(
                           this,
                           s"loadDocument: error in processNestedContent: "+
                             s"There should be an element for XMI pattern: $xmiPattern")))
-                  ){ umlParent =>
+                    case Some(umlParent) =>
                       val x2u = xmi2uml + (xmiE -> umlE)
                       val compositeMetaPropertyName = xmiE.element.label
                       val parent2childOK: NonEmptyList[java.lang.Throwable] \/ Unit =
@@ -322,7 +331,7 @@ trait DocumentLoader[Uml <: UML] {
 
                           case Some(mpf) =>
 
-                            show(s"* Nested Composite ($mpf) => $xmiE")
+                            DocumentLoader.show(s"* Nested Composite ($mpf) => $xmiE")
                             (umlU.AssociationMetaPropertyOption2LinksUpdate.find(_.links_query == mpf),
                               umlU.AssociationMetaPropertyIterable2LinksUpdate.find(_.links_query == mpf),
                               umlU.AssociationMetaPropertySequence2LinksUpdate.find(_.links_query == mpf),
@@ -362,10 +371,14 @@ trait DocumentLoader[Uml <: UML] {
                             .left
 
                         }
-                      parent2childOK
-                      .flatMap { _ =>
-                          processAttributes(x2u, xmiE, nestedContents, Seq())
-                          .flatMap { nestedOther =>
+                      parent2childOK match {
+                        case -\/(nels) =>
+                          -\/(nels)
+                        case \/-(_) =>
+                          processAttributes(x2u, xmiE, nestedContents, Seq()) match {
+                            case -\/(nels) =>
+                              -\/(nels)
+                            case \/-(nestedOther) =>
                               processNestedContent(
                                 x2u, xmiE, nestedOther,
                                 more :+ ((xmiPattern, restContents)), references)
@@ -374,7 +387,7 @@ trait DocumentLoader[Uml <: UML] {
                   }
               }
           }
-        case (xmiOther, otherElements) =>
+        case Some((xmiOther, otherElements)) =>
           // @todo
           ???
       }
@@ -416,7 +429,7 @@ trait DocumentLoader[Uml <: UML] {
    *                      of non-composite UML Properties in the OMG UML metamodel
    * @return Success or Failure
    */
-  /* @annotation.tailrec */ final def processXMIReferences
+  @annotation.tailrec final def processXMIReferences
   (d: SerializableDocument[Uml],
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap,
@@ -426,17 +439,18 @@ trait DocumentLoader[Uml <: UML] {
     if (xmiReferences.isEmpty)
       \/-(())
     else
-      xmi2uml
-      .get(xmiReferences.head._1)
-      .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+      xmi2uml.get(xmiReferences.head._1) match {
+      case None =>
         -\/(NonEmptyList(
           documentLoaderException(
             this,
             s"loadDocument: error in processXMIReferences: Missing entry for ${xmiReferences.head._1}")))
-      ){ umlE =>
-        updateElementReferences(d, ds, xmi2uml, xmiReferences.head._1, umlE, xmiReferences.head._2)
-        .flatMap { _ =>
-          processXMIReferences(d, ds, xmi2uml, xmiReferences.tail)
+      case Some(umlE) =>
+        updateElementReferences(d, ds, xmi2uml, xmiReferences.head._1, umlE, xmiReferences.head._2) match {
+          case -\/(nels) =>
+            -\/(nels)
+          case \/-(_) =>
+            processXMIReferences(d, ds, xmi2uml, xmiReferences.tail)
         }
       }
 
@@ -464,8 +478,8 @@ trait DocumentLoader[Uml <: UML] {
   (implicit umlU: UMLUpdate[Uml])
   : NonEmptyList[java.lang.Throwable] \/ Unit = {
     // @todo
-    //show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
-    //xmiReferences.foreach { ref => show(s"* ref: $ref") }
+    DocumentLoader.show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
+    xmiReferences.foreach { ref => DocumentLoader.show(s"* ref: $ref") }
     \/-(())
   }
 
@@ -487,8 +501,8 @@ trait DocumentLoader[Uml <: UML] {
    tags: Seq[Elem])
   : NonEmptyList[java.lang.Throwable] \/ Unit = {
     // @todo
-    //show(s"* Update ${tags.size} tags")
-    //tags.foreach { t => show(s"* tag: $t") }
+    DocumentLoader.show(s"* Update ${tags.size} tags")
+    tags.foreach { t => DocumentLoader.show(s"* tag: $t") }
     \/-(())
   }
 
@@ -519,11 +533,37 @@ trait DocumentLoader[Uml <: UML] {
           .umlUpdateError[Uml, UMLElement[Uml]](
             umlU,
             Iterable(),
-            s"There should be a UML element corresponding to $xmiE to update the attribute $attributeName with value $attributeValue")))
+            s"There should be a UML element corresponding to $xmiE to update "+
+            s"the attribute $attributeName with value $attributeValue")))
     }{ umlElement =>
+        umlU.metaclass_attribute_updaters.get(xmiE.xmiType)
+        .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+            -\/(
+                NonEmptyList(
+                    UMLError
+                    .umlUpdateError[Uml, UMLElement[Uml]](
+                        umlU,
+                        Iterable(),
+                        s"No metaclass updater available for ${xmiE.xmiType} "+
+                        s"for attribute '$attributeName' with value $attributeValue")))
+        ){ metaclassAttributeMap =>
+          metaclassAttributeMap.get(attributeName)
+          .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+            -\/(
+                NonEmptyList(
+                    UMLError
+                    .umlUpdateError[Uml, UMLElement[Uml]](
+                        umlU,
+                        Iterable(),
+                        s"No attribute updater available for ${xmiE.xmiType} "+
+                        s"for attribute '$attributeName' with value $attributeValue")))
+          ){ updater =>
+            updater.update(umlElement, attributeValue)
+          }
+        }
         // @todo
-        show(s"TODO<: update ${xmiE.xmiType}::$attributeName = $attributeValue")
-        \/-(())
+        //DocumentLoader.show(s"TODO<: update ${xmiE.xmiType}::$attributeName = $attributeValue")
+        //\/-(())
     }
 
   /**
