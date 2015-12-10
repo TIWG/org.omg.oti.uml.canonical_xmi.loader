@@ -43,7 +43,7 @@ import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.canonicalXMI.DocumentSet
 import org.omg.oti.uml.loader._
 import org.omg.oti.uml.read.api._
-import org.omg.oti.uml.xmi.SerializableDocument
+import org.omg.oti.uml.xmi._
 
 import scala.{Option,None,Some,StringContext}
 import scala.Predef.{???,classOf,require,String}
@@ -84,6 +84,8 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
   : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
   
   override def load
+  ()
+  (implicit idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml] = {
 
     modelURL

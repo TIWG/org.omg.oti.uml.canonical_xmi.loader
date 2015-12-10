@@ -82,6 +82,7 @@ trait Load2[Uml <: UML] {
   (ds: DocumentSet[Uml])
   (implicit
    loader: DocumentLoader[Uml],
+   idg: IDGenerator[Uml],
    umlF: UMLFactory[Uml],
    umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],

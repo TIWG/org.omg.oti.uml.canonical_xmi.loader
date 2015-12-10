@@ -106,7 +106,7 @@ trait DocumentLoader[Uml <: UML] {
    */
   def loadDocument
   (url: Uml#LoadURL, ds: DocumentSet[Uml])
-  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml],
+  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml], idg: IDGenerator[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
   : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml]) = {
@@ -213,7 +213,7 @@ trait DocumentLoader[Uml <: UML] {
   (xmi2uml1: XMI2UMLElementMap,
    xmi2contents1: Seq[(XMIElementDefinition, Seq[Elem])],
    references: Map[XMIElementDefinition, Seq[Elem]])
-  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
+  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Map[XMIElementDefinition, Seq[Elem]]) =
     if (xmi2contents1.isEmpty)
       \/-((xmi2uml1, references))
@@ -241,7 +241,7 @@ trait DocumentLoader[Uml <: UML] {
    xmiP: XMIElementDefinition,
    content: Seq[Elem],
    other: Seq[Elem])
-  (implicit umlU: UMLUpdate[Uml])
+  (implicit umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ Seq[Elem] =
     if (content.isEmpty)
       \/-(other)
@@ -282,7 +282,7 @@ trait DocumentLoader[Uml <: UML] {
    content: Seq[Elem],
    more: Seq[(XMIElementDefinition, Seq[Elem])],
    references: Map[XMIElementDefinition, Seq[Elem]])
-  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
+  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])]) =
     if (content.isEmpty)
       if (more.isEmpty)
@@ -412,13 +412,13 @@ trait DocumentLoader[Uml <: UML] {
    xmi2uml: XMI2UMLElementMap)
   (xmiPattern: XMIElementDefinition,
    attributesAndOther: Seq[Elem])
-  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
+  (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ (XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])]) =
     processAttributes(xmi2uml, xmiPattern, attributesAndOther, Seq())
     .flatMap { otherContent =>
       processNestedContent(xmi2uml, xmiPattern, otherContent, Seq(), Map())
     }
-
+  
   /**
    * Processing of XMI Element cross-references as updates of UML non-composite (meta) Properties
    *
@@ -523,7 +523,7 @@ trait DocumentLoader[Uml <: UML] {
    e: Option[UMLElement[Uml]],
    attributeName: String,
    attributeValue: String)
-  (implicit umlU: UMLUpdate[Uml])
+  (implicit umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ Unit =
     e
     .fold[NonEmptyList[java.lang.Throwable] \/ Unit] {
