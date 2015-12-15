@@ -40,10 +40,14 @@
 package test.org.omg.oti.uml.loader
 
 import org.omg.oti.uml.UMLError
+import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.canonicalXMI.DocumentSet
+import org.omg.oti.uml.characteristics._
+import org.omg.oti.uml.loader.DocumentLoader
 import org.omg.oti.uml.loader._
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.xmi._
+import org.omg.oti.uml.xmi.DocumentKind._
 
 import scala.{Option,None,Some,StringContext}
 import scala.Predef.{???,classOf,require,String}
@@ -55,9 +59,8 @@ import java.lang.System
 
 import scalaz._, Scalaz._
 
-trait Load1[Uml <: UML] extends LoadTest[Uml] {
+trait Load1[Uml <: UML] {
 
-    
   val loadCL = classOf[Load1[Uml]].getClassLoader
   val modelPath1 = "resources/loadTests/SysML.xmi"
   val modelPath2 = "loadTests/SysML.xmi"
@@ -71,8 +74,7 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
     .headOption
     .fold[NonEmptyList[java.lang.Throwable] \/ java.net.URL](
       NonEmptyList(
-        documentLoaderException(
-          loader,
+        UMLError.umlAdaptationError(
           s"canot find resource model as: $modelPath1 or $modelPath2"
         )
       ).left
@@ -83,9 +85,13 @@ trait Load1[Uml <: UML] extends LoadTest[Uml] {
   def makeRootPackage(xmiLabel: String)
   : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
   
-  override def load
-  ()
-  (implicit idg: IDGenerator[Uml])
+  def load
+  (kind: DocumentKind,
+   artifactKind: OTIArtifactKind,
+   ds: DocumentSet[Uml])
+  (implicit
+   loader: DocumentLoader[Uml],
+   idg: IDGenerator[Uml])
   : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml] = {
 
     modelURL

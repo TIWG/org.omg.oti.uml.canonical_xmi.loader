@@ -41,12 +41,14 @@ package org.omg.oti.uml.loader
 
 import org.omg.oti.uml.OTIPrimitiveTypes._
 import org.omg.oti.uml.UMLError
-import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.canonicalXMI._
-import org.omg.oti.uml.write.api._
+import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.read.operations._
+import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.xmi._
+import org.omg.oti.uml.xmi.DocumentKind._
+
 import scala.annotation
 import scala.{Option,None,Some,StringContext,Unit}
 import scala.collection.immutable._
@@ -91,9 +93,14 @@ trait DocumentLoader[Uml <: UML] {
 
   import documentOps._
 
+  type LoadDocumentResult =
+  NonEmptyList[java.lang.Throwable] \/ (Document[Uml], DocumentSet[Uml])
+    
   /**
    * Load an OTI UML 2.5 Package from its OTI Canonical XMI Document serialization.
    *
+   * @param kind The kind of document to load (BuiltIn vs. Serializable) (Immutable vs. Mutable)
+   * @param artifactKind the OTI Artifact Kind for the Root Package
    * @param url The Document URL of an OTI UML 2.5 Canonical XMI document to load.
    * @param ds The DocumentSet against which cross references from the loaded document will be resolved
    * @param umlF The tool-specific OTI UML Factory
@@ -105,11 +112,14 @@ trait DocumentLoader[Uml <: UML] {
    *         - the new DocumentSet with the loaded SerializableDocument
    */
   def loadDocument
-  (url: Uml#LoadURL, ds: DocumentSet[Uml])
+  (kind: DocumentKind,
+   artifactKind: OTIArtifactKind,
+   url: Uml#LoadURL, 
+   ds: DocumentSet[Uml])
   (implicit umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml], idg: IDGenerator[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml]) = {
+  : LoadDocumentResult = {
 
     openExternalDocumentStreamForImport(url)
       .flatMap { is =>
@@ -118,7 +128,7 @@ trait DocumentLoader[Uml <: UML] {
 
         nonFatalCatch
         .either(XML.load(is))
-        .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml])](
+        .fold[LoadDocumentResult](
 
           (cause: java.lang.Throwable) =>
             -\/(NonEmptyList(documentLoaderException(
@@ -149,7 +159,7 @@ trait DocumentLoader[Uml <: UML] {
                 }
 
               nsN
-              .flatMap[NonEmptyList[java.lang.Throwable], (SerializableDocument[Uml], DocumentSet[Uml])] { _ =>
+              .flatMap[NonEmptyList[java.lang.Throwable], (Document[Uml], DocumentSet[Uml])] { _ =>
 
                 // there must be at least 1 child, which is a kind of UML Package,
                 // Profile or Model subsequent children are XML Element nodes
@@ -159,29 +169,35 @@ trait DocumentLoader[Uml <: UML] {
 
                 implicit val _ds = ds
 
-                makeDocumentFromRootNode(url, xmiElements)
-                .flatMap[NonEmptyList[java.lang.Throwable], (SerializableDocument[Uml], DocumentSet[Uml])] {
+                makeDocumentFromRootNode(kind, artifactKind, url, xmiElements)
+                .flatMap[NonEmptyList[java.lang.Throwable], (Document[Uml], DocumentSet[Uml])] {
 
-                  case (document: SerializableDocument[Uml],
-                  xmi2umlRoot: XMI2UMLElementMap,
-                  xmi2contents: Seq[(XMIElementDefinition, Seq[scala.xml.Elem])],
-                  tags: Seq[scala.xml.Elem]) =>
+                  case (document: Document[Uml],
+                        ds2: DocumentSet[Uml],
+                        xmi2umlRoot: XMI2UMLElementMap,
+                        xmi2contents: Seq[(XMIElementDefinition, Seq[scala.xml.Elem])],
+                        tags: Seq[scala.xml.Elem]) =>
 
-                    processXMIContents(document, ds)(xmi2umlRoot, xmi2contents, Map())
+                    processXMIContents(document, ds2)(xmi2umlRoot, xmi2contents, Map())
                     .flatMap {
 
-                        case (xmi2umlFull: XMI2UMLElementMap, xmiReferences: Map[XMIElementDefinition, Seq[Elem]]) =>
-
+                        case (xmi2umlFull: XMI2UMLElementMap, 
+                              xmiReferences: Map[XMIElementDefinition, Seq[Elem]]) =>
                           (
-                            processXMIReferences(document, ds, xmi2umlFull, xmiReferences) +++
-                            processXMITags(document, ds, xmi2umlFull, tags)
+                            processXMIReferences(document, ds2, xmi2umlFull, xmiReferences) +++
+                            processXMITags(document, ds2, xmi2umlFull, tags)
                           )
                           .flatMap { _ =>
-                              addDocument(ds, document).flatMap {
-                                ds1: DocumentSet[Uml] =>
-
-                                  \/-((document, ds1))
-                              }
+                            val result: LoadDocumentResult =
+                              document match {
+                              case mD: BuiltInMutableDocument[Uml] =>
+                                ds2.freezeBuiltInMutableDocument(mD)
+                              case mD: SerializableMutableDocument[Uml] =>
+                                ds2.freezeSerializableMutableDocument(mD)
+                              case d =>
+                                \/-((d, ds2))
+                            }
+                            result
                           }
                     }
                 }
@@ -208,7 +224,7 @@ trait DocumentLoader[Uml <: UML] {
    * @return
    */
   @annotation.tailrec private def processXMIContents
-  (d: SerializableDocument[Uml],
+  (d: Document[Uml],
    ds: DocumentSet[Uml])
   (xmi2uml1: XMI2UMLElementMap,
    xmi2contents1: Seq[(XMIElementDefinition, Seq[Elem])],
@@ -270,11 +286,12 @@ trait DocumentLoader[Uml <: UML] {
    * @param xmiPattern A pattern of an XMI tree corresponding to a UML Element of some kind
    * @param content Nested XMI Element nodes as children of the XMI tree element pattern
    * @param more Additional nested content to be processed tail-recursively
-   * @param references Nested content in the form of XMI cross-references to be processed in a subsequent phase
+   * @param references Nested content in the form of XMI cross-references 
+   *                   to be processed in a subsequent phase
    * @param umlF The tool-specific OTI UML Factory
    * @param umlU The tool-specific OTI UML Update
-   * @return The XMI elements mapped to UML elements (composite nesting) and the XMI cross-references to be processed
-   *         in a subsequent phase
+   * @return The XMI elements mapped to UML elements (composite nesting) and 
+   *         the XMI cross-references to be processed in a subsequent phase
    */
   @annotation.tailrec final def processNestedContent
   (xmi2uml: XMI2UMLElementMap,
@@ -296,7 +313,8 @@ trait DocumentLoader[Uml <: UML] {
         processNestedContent(
           xmi2uml, xmiPattern, content.tail,
           more, references.updated(xmiPattern, xmiReferences))
-      case Some((xmiE@XMIElementDefinition(e, xmiID, xmiUUID, xmiType, nsPrefix, nestedContents), restContents)) =>
+      case Some((xmiE@XMIElementDefinition(e, xmiID, xmiUUID, xmiType, nsPrefix, nestedContents), 
+                 restContents)) =>
           umlF
           .reflectiveFactoryLookup
           .get(xmiType) match {
@@ -400,14 +418,15 @@ trait DocumentLoader[Uml <: UML] {
    * @param ds The DocumentSet against which cross references from the loaded document will be resolved
    * @param xmi2uml Map of XMI tree patterns to UML Elements created
    * @param xmiPattern A pattern of an XMI tree corresponding to a UML Element of some kind
-   * @param attributesAndOther XMI Element nodes corresponding to UML attributes or non-composite cross-references
+   * @param attributesAndOther XMI Element nodes corresponding 
+   *                           to UML attributes or non-composite cross-references
    * @param umlF The tool-specific OTI UML Factory
    * @param umlU The tool-specific OTI UML Update
-   * @return The XMI elements mapped to UML elements (composite nesting) and the XMI cross-references to be processed
-   *         in a subsequent phase
+   * @return The XMI elements mapped to UML elements (composite nesting) and 
+   *         the XMI cross-references to be processed in a subsequent phase
    */
   def processXMIElementAttributesAndNestedContent
-  (d: SerializableDocument[Uml],
+  (d: Document[Uml],
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap)
   (xmiPattern: XMIElementDefinition,
@@ -430,7 +449,7 @@ trait DocumentLoader[Uml <: UML] {
    * @return Success or Failure
    */
   @annotation.tailrec final def processXMIReferences
-  (d: SerializableDocument[Uml],
+  (d: Document[Uml],
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap,
    xmiReferences: Map[XMIElementDefinition, Seq[Elem]])
@@ -455,21 +474,23 @@ trait DocumentLoader[Uml <: UML] {
       }
 
   /**
-   * Processing of XMI Element cross-references as updates of UML non-composite (meta) Properties of a single UML Element
+   * Processing of XMI Element cross-references as updates 
+   * of UML non-composite (meta) Properties of a single UML Element
    *
-   * @todo Lookup the OTI update function to update the corresponding non-composite UML Element property reference
+   * @todo Lookup the OTI update function to update the corresponding 
+   *       non-composite UML Element property reference
    *
    * @param d The Document being loaded (i.e., XMI Import in the sense of the OMG XMI specification)
    * @param ds The DocumentSet against which cross references from the loaded document will be resolved
    * @param xmi2uml Map of XMI tree patterns to UML Elements created
    * @param xmiElement An XMI tree pattern
    * @param umlElement The UML Element created from the XMI tree pattern
-   * @param xmiReferences The XMI Elements corresponding to the serialization of non-composite UML Properties
-   *                      of the UML Element
+   * @param xmiReferences The XMI Elements corresponding to the serialization of 
+   *                      non-composite UML Properties of the UML Element
    * @return Success or Failure
    */
   def updateElementReferences
-  (d: SerializableDocument[Uml],
+  (d: Document[Uml],
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap,
    xmiElement: XMIElementDefinition,
@@ -484,7 +505,8 @@ trait DocumentLoader[Uml <: UML] {
   }
 
   /**
-   * Processing of XMI Elements corresponding to the serialization of MOF tags or stereotypes applied to UML Elements
+   * Processing of XMI Elements corresponding to the serialization of 
+   * MOF tags or stereotypes applied to UML Elements
    *
    * @todo Lookup the OTI UML Update function corresponding to either a MOF tag or a stereotype tag property
    *
@@ -495,7 +517,7 @@ trait DocumentLoader[Uml <: UML] {
    * @return Success or Failure
    */
   def processXMITags
-  (d: SerializableDocument[Uml],
+  (d: Document[Uml],
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap,
    tags: Seq[Elem])
@@ -569,6 +591,8 @@ trait DocumentLoader[Uml <: UML] {
   /**
    * Import an XMI Document (from its serialization) as an OTI SerializableDocument
    *
+   * @param kind The kind of document to load (BuiltIn vs. Serializable) (Immutable vs. Mutable)
+   * @param artifactKind the OTI Artifact Kind for the Root Package
    * @param url The Document URL of an OTI UML 2.5 Canonical XMI document to load.
    * @param xmiElements The XMI Element nodes corresponding to the serialization of the document
    * @param ds The DocumentSet against which cross references from the loaded document will be resolved
@@ -581,11 +605,17 @@ trait DocumentLoader[Uml <: UML] {
    *         - the XMI Element serialization of MOF tags and of stereotypes applied to UML Elements
    */
   def makeDocumentFromRootNode
-  (url: Uml#LoadURL, xmiElements: Seq[Elem])
+  (kind: DocumentKind,
+   artifactKind: OTIArtifactKind,
+   url: Uml#LoadURL, 
+   xmiElements: Seq[Elem])
   (implicit ds: DocumentSet[Uml], umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
+  : NonEmptyList[java.lang.Throwable] \/ 
+    (Document[Uml], DocumentSet[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
     XMIPattern.matchXMIPattern(xmiElements)
-    .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
+    .fold[NonEmptyList[java.lang.Throwable] \/
+          (Document[Uml], DocumentSet[Uml], XMI2UMLElementMap, 
+           Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
       -\/(
         NonEmptyList(
           documentLoaderException(
@@ -594,20 +624,23 @@ trait DocumentLoader[Uml <: UML] {
     } { case ((xmiPattern:XMIPattern, xmiTags: Seq[Elem])) =>
         xmiPattern match {
           case xmiElement: XMIElementDefinition =>
-            makeDocumentFromRootNode(url, xmiElement, xmiTags)
+            makeDocumentFromRootNode(kind, artifactKind, url, xmiElement, xmiTags)
           case _                                =>
             -\/(
               NonEmptyList(
                 documentLoaderException(
                   this,
-                  s"error in makeDocumentFromRootNode(url=$url, xmiElements): Not supported: $xmiPattern")))
+                  s"error in makeDocumentFromRootNode(kind=$kind, url=$url, xmiElements):"+
+                  s"Not supported: $xmiPattern")))
         }
     }
 
   /**
-   * Import an XMI Document (from XMI tree patterns and XMI Element serializations of MOF tags and stereotypes aplied)
-   * as an OTI SerializableDocument
+   * Import an XMI Document 
+   * (from XMI tree patterns and XMI Element serializations of MOF tags and stereotypes aplied)
    *
+   * @param kind The kind of document to load (BuiltIn vs. Serializable) (Immutable vs. Mutable)
+   * @param artifactKind the OTI Artifact Kind for the Root Package
    * @param url The Document URL of an OTI UML 2.5 Canonical XMI document to load.
    * @param pattern A pattern of an XMI tree corresponding to a UML Element of some kind
    * @param tags XMI Element nodes representing the serialization of stereotypes applied to UML Elements
@@ -621,27 +654,37 @@ trait DocumentLoader[Uml <: UML] {
    *         - the XMI Element serialization of MOF tags and of stereotypes applied to UML Elements
    */
   def makeDocumentFromRootNode
-  (url: Uml#LoadURL, pattern: XMIElementDefinition, tags: Seq[Elem])
+  (kind: DocumentKind,
+   artifactKind: OTIArtifactKind,
+   url: Uml#LoadURL, 
+   pattern: XMIElementDefinition, 
+   tags: Seq[Elem])
   (implicit ds: DocumentSet[Uml], umlF: UMLFactory[Uml], umlU: UMLUpdate[Uml])
-  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
+  : NonEmptyList[java.lang.Throwable] \/ 
+    (MutableDocument[Uml], DocumentSet[Uml], XMI2UMLElementMap, 
+     Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
     pattern match {
       case xmiPattern@
         XMIElementDefinition(e, xmiID, xmiUUID, xmiType, Some(MOFExtTagNSPrefix(_, nsPrefix, _)), contents) =>
-        contents
-        .foldLeft(Option.empty[String])({
+        val uriAttribute = contents.foldLeft(Option.empty[String])({
           case (s: Some[_], _) =>
             s
           case (None, e)       =>
             XMIPattern.lookupElementText("URI")(e)
         })
+        
+        uriAttribute
         .fold(missingURIAttribute)((uri: String) => {
           umlF.reflectivePackageFactoryLookup.get(xmiType)
-          .fold[NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
+          .fold[NonEmptyList[java.lang.Throwable] \/ 
+                (MutableDocument[Uml], DocumentSet[Uml], XMI2UMLElementMap, 
+                 Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem])]{
             -\/(
               NonEmptyList(
                 documentLoaderException(
                   this,
-                  s"error in makeDocumentFromRootNode(url=$url, pattern, tags): No Package-based factory found for xmiType=uml:$xmiType")))
+                  s"error in makeDocumentFromRootNode(url=$url, pattern, tags): "+
+                  s"No Package-based factory found for xmiType=uml:$xmiType")))
           } { factory =>
               factory(umlF)
               .flatMap { root =>
@@ -651,19 +694,23 @@ trait DocumentLoader[Uml <: UML] {
                   val info = OTISpecificationRootCharacteristics(
                     packageURI = OTI_URI(uri),
                     documentURL = OTI_URL(externalURI.toString),
-                    artifactKind = OTISerializableModelLibraryArtifactKind(),
+                    artifactKind = artifactKind,
                     nsPrefix = OTI_NS_PREFIX(nsPrefix),
-                    uuidPrefix = OTI_UUID_PREFIX(nsPrefix)) // @todo review this
-                  createSerializableDocumentFromImportedRootPackage(
-                    info,
-                    documentURL = url,
-                    root)
-                    .flatMap { sd =>
-
-                      val xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
-                      val xmi2contents = Seq[(XMIElementDefinition, Seq[Elem])](xmiPattern -> contents)
-                      \/-((sd, xmi2uml, xmi2contents, tags))
+                    uuidPrefix = OTI_UUID_PREFIX(nsPrefix)) 
+                  
+                  val result = for {
+                    added <- kind match {
+                      case BuiltInImmutable | BuiltInMutable =>
+                        addBuiltInMutableDocument(ds, info, url, root)
+                      case SerializableImmutable | SerializableMutable =>
+                        addSerializableMutableDocument(ds, info, url, root)
                     }
+                    (d, ds2) = added
+                    xmi2uml = Map[XMIElementDefinition, UMLElement[Uml]](xmiPattern -> root)
+                    xmi2contents = Seq[(XMIElementDefinition, Seq[Elem])](xmiPattern -> contents)
+                  } yield (d, ds2, xmi2uml, xmi2contents, tags)
+                  
+                  result
                 }
               }
           }
@@ -684,7 +731,9 @@ trait DocumentLoader[Uml <: UML] {
    *         (it should be really a kind of UML Package)
    */
   protected def missingURIAttribute
-  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], XMI2UMLElementMap, Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
+  : NonEmptyList[java.lang.Throwable] \/ 
+    (MutableDocument[Uml], DocumentSet[Uml], XMI2UMLElementMap, 
+     Seq[(XMIElementDefinition, Seq[Elem])], Seq[Elem]) =
     -\/(
       NonEmptyList(
         documentLoaderException(

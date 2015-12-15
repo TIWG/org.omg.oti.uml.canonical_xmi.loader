@@ -39,10 +39,17 @@
  */
 package test.org.omg.oti.uml.loader
 
+import java.net.URL
+
+import org.omg.oti.uml.canonicalXMI._
+import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.loader.DocumentLoader
-import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
+import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.xmi._
+import org.omg.oti.uml.xmi.DocumentKind._
+
+import scala.reflect.runtime.universe._
 import scalaz._
 
 /**
@@ -54,9 +61,23 @@ trait LoadTest[Uml <: UML] {
   val umlF: UMLFactory[Uml]  
   implicit val umlU: UMLUpdate[Uml]
     
+  def url2loadURL
+  (url: URL)
+  (implicit loader: DocumentLoader[Uml])
+  : Uml#LoadURL
+
   def load
-  ()
-  (implicit idg: IDGenerator[Uml])
-  : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
-  
+  (modelURL: java.net.URL,
+   kind: DocumentKind,
+   artifactKind: OTIArtifactKind,
+   ds: DocumentSet[Uml])
+  (implicit
+   loader: DocumentLoader[Uml],
+   idg: IDGenerator[Uml],
+   umlF: UMLFactory[Uml],
+   umlU: UMLUpdate[Uml],
+   nodeT: TypeTag[Document[Uml]],
+   edgeT: TypeTag[DocumentEdge[Document[Uml]]])
+  : NonEmptyList[java.lang.Throwable] \/ (Document[Uml], DocumentSet[Uml]) =
+    loader.loadDocument(kind, artifactKind, url2loadURL(modelURL), ds)
 }

@@ -41,10 +41,12 @@ package test.org.omg.oti.uml.loader
 
 import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.canonicalXMI._
+import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.loader.DocumentLoader
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.xmi._
+import org.omg.oti.uml.xmi.DocumentKind._
 
 import scala.{Option, None, Some, StringContext}
 import scala.collection.immutable._
@@ -79,7 +81,9 @@ trait Load2[Uml <: UML] {
   : Uml#LoadURL
 
   def load
-  (ds: DocumentSet[Uml])
+  (kind: DocumentKind,
+   artifactKind: OTIArtifactKind,
+   ds: DocumentSet[Uml])
   (implicit
    loader: DocumentLoader[Uml],
    idg: IDGenerator[Uml],
@@ -87,6 +91,6 @@ trait Load2[Uml <: UML] {
    umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : NonEmptyList[java.lang.Throwable] \/ (SerializableDocument[Uml], DocumentSet[Uml]) =
-    loader.loadDocument(url2loadURL(modelURL), ds)
+  : NonEmptyList[java.lang.Throwable] \/ (Document[Uml], DocumentSet[Uml]) =
+    loader.loadDocument(kind, artifactKind, url2loadURL(modelURL), ds)
 }
