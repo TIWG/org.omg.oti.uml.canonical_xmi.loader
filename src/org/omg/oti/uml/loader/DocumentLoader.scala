@@ -485,12 +485,41 @@ trait DocumentLoader[Uml <: UML] {
    xmiReferences: Seq[Elem])
   (implicit umlU: UMLUpdate[Uml])
   : NonEmptyList[java.lang.Throwable] \/ Unit = {
-    // @todo
-    DocumentLoader.show(s"* Update ${xmiReferences.size} references for $xmiElement (uml: $umlElement)")
-    xmiReferences.foreach { ref => DocumentLoader.show(s"* ref: $ref") }
-    \/-(())
+    val r0: NonEmptyList[java.lang.Throwable] \/ Unit = \/-(())
+    val rN: NonEmptyList[java.lang.Throwable] \/ Unit = 
+      ( r0 /: xmiReferences ) { (acc, xmiReference) =>
+      acc.flatMap { _ =>
+        updateElementReference(d, ds, xmi2uml, xmiElement, umlElement, xmiReference)
+      }
+    }
+    rN
   }
-
+  
+  def updateElementReference
+  (d: Document[Uml],
+   ds: DocumentSet[Uml],
+   xmi2uml: XMI2UMLElementMap,
+   xmiElement: XMIElementDefinition,
+   umlElement: UMLElement[Uml],
+   xmiReference: Elem)
+  (implicit umlU: UMLUpdate[Uml])
+  : NonEmptyList[java.lang.Throwable] \/ Unit = 
+    XMIPattern.matchXMILocalReference(xmiReference)
+    .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+      XMIPattern.matchXMICrossReference(xmiReference)
+      .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+         -\/(NonEmptyList(
+           UMLError.umlUpdateError[Uml, UMLElement[Uml]](
+             umlU,
+             Iterable(umlElement),
+             s"Unrecognized XMI reference: $xmiReference")))
+      ){ href =>
+        ???
+      }
+    ){ idref =>
+     ???
+    }
+  
   /**
    * Processing of XMI Elements corresponding to the serialization of 
    * MOF tags or stereotypes applied to UML Elements
