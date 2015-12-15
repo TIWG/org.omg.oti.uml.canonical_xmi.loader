@@ -68,8 +68,6 @@ trait LoadTest[Uml <: UML] {
 
   def load
   (modelURL: java.net.URL,
-   kind: DocumentKind,
-   artifactKind: OTIArtifactKind,
    ds: DocumentSet[Uml])
   (implicit
    loader: DocumentLoader[Uml],
@@ -78,6 +76,6 @@ trait LoadTest[Uml <: UML] {
    umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : NonEmptyList[java.lang.Throwable] \/ (Document[Uml], DocumentSet[Uml]) =
-    loader.loadDocument(kind, artifactKind, url2loadURL(modelURL), ds)
+  : NonEmptyList[java.lang.Throwable] \/ (LoadingMutableDocument[Uml], DocumentSet[Uml]) =
+    loader.loadDocument(url2loadURL(modelURL), ds)
 }

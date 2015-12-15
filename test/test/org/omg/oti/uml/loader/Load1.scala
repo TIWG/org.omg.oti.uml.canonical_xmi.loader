@@ -86,9 +86,7 @@ trait Load1[Uml <: UML] {
   : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
   
   def load
-  (kind: DocumentKind,
-   artifactKind: OTIArtifactKind,
-   ds: DocumentSet[Uml])
+  (ds: DocumentSet[Uml])
   (implicit
    loader: DocumentLoader[Uml],
    idg: IDGenerator[Uml])
