@@ -365,16 +365,16 @@ trait DocumentLoader[Uml <: UML] {
                 case -\/(nels) =>
                   \&/.This(nels)
                 case \/-(umlE) =>
-                  xmi2uml.get(xmiPattern) match {
+                  a.u.get(a.p) match {
                     case None =>
                       \&/.This(
                         NonEmptyList(
                           documentLoaderException(
                             this,
                             s"loadDocument: error in processNestedContent: "+
-                            s"There should be an element for XMI pattern: $xmiPattern")))
+                            s"There should be an element for XMI pattern: ${a.p}")))
                     case Some(umlParent) =>
-                      val x2u = xmi2uml + (xmiE -> umlE)
+                      val x2u = a.u + (xmiE -> umlE)
                       val compositeMetaPropertyName = xmiE.element.label
                       val parent2childOK: NonEmptyList[java.lang.Throwable] \/ Unit =
                         umlParent.compositeMetaProperties.find((mpf) =>
