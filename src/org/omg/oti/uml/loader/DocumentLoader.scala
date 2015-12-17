@@ -145,17 +145,18 @@ trait DocumentLoader[Uml <: UML] {
                 \/-(())
               val nsN: NonEmptyList[java.lang.Throwable] \/ Unit =
                 (ns0 /: Seq("xmi", "xsi", "uml", "mofext")) { (nsi, ns) =>
-                  nsi +++
-                    (if (!namespaces.contains(ns))
-                      -\/(NonEmptyList(documentLoaderException(
+                    if (!namespaces.contains(ns))
+                      nsi +++ -\/(NonEmptyList(documentLoaderException(
                         this,
                         s"loadDocument($url) failed: $ns' namespace must be declared in root XMI node")))
                     else
-                      \/-(()))
+                      nsi
                 }
 
-              nsN
-              .flatMap[NonEmptyList[java.lang.Throwable], (LoadingMutableDocument[Uml], DocumentSet[Uml])] { _ =>
+              val result =
+                nsN
+                .flatMap[NonEmptyList[java.lang.Throwable], (LoadingMutableDocument[Uml], DocumentSet[Uml])] {
+                _ =>
 
                 // there must be at least 1 child, which is a kind of UML Package,
                 // Profile or Model subsequent children are XML Element nodes
@@ -189,6 +190,7 @@ trait DocumentLoader[Uml <: UML] {
                     }
                 }
               }
+              result
             }
         )
       }
@@ -336,7 +338,7 @@ trait DocumentLoader[Uml <: UML] {
 
                           case Some(mpf) =>
 
-                            DocumentLoader.show(s"* Nested Composite ($mpf) => $xmiE")
+                            //DocumentLoader.show(s"* Nested Composite ($mpf) => $xmiE")
                             (umlU.AssociationMetaPropertyOption2LinksUpdate.find(_.links_query == mpf),
                               umlU.AssociationMetaPropertyIterable2LinksUpdate.find(_.links_query == mpf),
                               umlU.AssociationMetaPropertySequence2LinksUpdate.find(_.links_query == mpf),
@@ -514,10 +516,60 @@ trait DocumentLoader[Uml <: UML] {
              Iterable(umlElement),
              s"Unrecognized XMI reference: $xmiReference")))
       ){ href =>
-        ???
+        umlU.metaclass_reference_updater_table.get(xmiElement.xmiType)
+        .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+            -\/(
+                NonEmptyList(
+                    UMLError
+                    .umlUpdateError[Uml, UMLElement[Uml]](
+                        umlU,
+                        Iterable(),
+                        s"No metaclass updater available for ${xmiElement.xmiType} "+
+                        s"for reference $xmiReference")))
+        ){ metaclassReferenceMap =>
+          metaclassReferenceMap.get(xmiReference.label)
+          .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+            -\/(
+                NonEmptyList(
+                    UMLError
+                    .umlUpdateError[Uml, UMLElement[Uml]](
+                        umlU,
+                        Iterable(),
+                        s"No reference updater available for ${xmiElement.xmiType} "+
+                        s"for reference '${xmiReference.label}' in: $xmiReference")))
+          ){ updater =>
+            DocumentLoader.show(s"* href: $href on: ${xmiElement.xmiType} for ${xmiReference.label}")
+            \/-(())
+          }
+        }
       }
     ){ idref =>
-     ???
+        umlU.metaclass_reference_updater_table.get(xmiElement.xmiType)
+        .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+            -\/(
+                NonEmptyList(
+                    UMLError
+                    .umlUpdateError[Uml, UMLElement[Uml]](
+                        umlU,
+                        Iterable(),
+                        s"No metaclass updater available for ${xmiElement.xmiType} "+
+                        s"for reference $xmiReference")))
+        ){ metaclassReferenceMap =>
+          metaclassReferenceMap.get(xmiReference.label)
+          .fold[NonEmptyList[java.lang.Throwable] \/ Unit](
+            -\/(
+                NonEmptyList(
+                    UMLError
+                    .umlUpdateError[Uml, UMLElement[Uml]](
+                        umlU,
+                        Iterable(),
+                        s"No reference updater available for ${xmiElement.xmiType} "+
+                        s"for reference '${xmiReference.label}' in: $xmiReference")))
+          ){ updater =>
+            DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
+            \/-(())
+          }
+        }
     }
   
   /**
@@ -539,8 +591,8 @@ trait DocumentLoader[Uml <: UML] {
    tags: Seq[Elem])
   : NonEmptyList[java.lang.Throwable] \/ Unit = {
     // @todo
-    DocumentLoader.show(s"* Update ${tags.size} tags")
-    tags.foreach { t => DocumentLoader.show(s"* tag: $t") }
+    //DocumentLoader.show(s"* Update ${tags.size} tags")
+    //tags.foreach { t => DocumentLoader.show(s"* tag: $t") }
     \/-(())
   }
 
