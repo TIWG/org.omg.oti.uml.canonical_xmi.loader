@@ -215,8 +215,11 @@ object XMIPattern {
   }
             
   def matchXMICrossReference(e: Elem): Option[String] =
-    if (e.child.isEmpty && 1 == e.attributes.size)
-      e.attribute("href") match {
+    if (e.child.isEmpty && 1 == e.attributes.size) {
+      val xmiNS = e.getNamespace("xmi")
+      require(null != xmiNS)
+      e.attribute(xmiNS, "href")
+      .orElse(e.attribute("href")) match {
         case Some(nodes) =>
           require(1 == nodes.size)
           nodes.head match {
@@ -229,12 +232,16 @@ object XMIPattern {
         case None =>
            None
       }
+    }
     else 
       None
     
   def matchXMILocalReference(e: Elem): Option[String] =
-    if (e.child.isEmpty && 1 == e.attributes.size)
-      e.attribute("idref") match {
+    if (e.child.isEmpty && 1 == e.attributes.size) {
+      val xmiNS = e.getNamespace("xmi")
+      require(null != xmiNS)
+      e.attribute(xmiNS, "idref")
+      .orElse(e.attribute("idref")) match {
         case Some(nodes) =>
           require(1 == nodes.size)
           nodes.head match {
@@ -247,6 +254,7 @@ object XMIPattern {
         case None =>
            None
       }
+    }
     else 
       None
     

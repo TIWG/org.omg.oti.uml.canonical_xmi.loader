@@ -76,6 +76,6 @@ trait LoadTest[Uml <: UML] {
    umlU: UMLUpdate[Uml],
    nodeT: TypeTag[Document[Uml]],
    edgeT: TypeTag[DocumentEdge[Document[Uml]]])
-  : NonEmptyList[java.lang.Throwable] \&/ (LoadingMutableDocument[Uml], DocumentSet[Uml]) =
+  : Set[java.lang.Throwable] \&/ (LoadingMutableDocument[Uml], DocumentSet[Uml]) =
     loader.loadDocument(url2loadURL(modelURL), ds)
 }
