@@ -66,9 +66,8 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
     organizationName := "JPL, Caltech, Airbus & Object Management Group",
     organizationHomepage := Some(url("http://solitaire.omg.org/browse/TIWG")),
 
-    scalaSource in Compile := baseDirectory.value / "svn" / "org.omg.oti" / "src",
-    unmanagedSourceDirectories in Compile +=  baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "src-gen",
-
+    scalaSource in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "src",
+    scalaSource in Test := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "test",
     classDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "bin",
     cleanFiles += (classDirectory in Compile).value,
 
@@ -124,7 +123,7 @@ def dynamicScriptsResourceSettings(dynamicScriptsProjectName: Option[String] = N
       packageSrc in Test,
       packageDoc in Test) map {
       (base, bin, src, doc, binT, srcT, docT) =>
-        val dir = base / "svn" / "org.omg.oti"
+        val dir = base / "svn" / "org.omg.oti.uml.loader"
         (dir ** "*.dynamicScripts").pair(relativeTo(dir)) ++
           ((dir ** "*.md") --- (dir / "sbt.staging" ***)).pair(relativeTo(dir)) ++
           (dir / "models" ** "*.mdzip").pair(relativeTo(dir)) ++
