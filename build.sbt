@@ -75,7 +75,8 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
 
     libraryDependencies ++= Seq (
       "org.omg.tiwg" %% "oti-uml-canonical_xmi-serialization"
-        % Versions.oti_uml_canonical_xmi_serialization % "compile" withSources() withJavadoc()
+        % Versions.oti_uml_canonical_xmi_serialization % "compile" withSources() withJavadoc() artifacts
+        Artifact("oti-uml-canonical_xmi-serialization", "zip", "zip", Some("resource"), Seq(), None, Map())
     ),
 
     IMCEKeys.nexusJavadocRepositoryRestAPIURL2RepositoryName := Map(
