@@ -68,8 +68,12 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
 
     scalaSource in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "src",
     scalaSource in Test := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "test",
+
     classDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "bin",
     cleanFiles += (classDirectory in Compile).value,
+
+    classDirectory in Test := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "bin.test",
+    cleanFiles += (classDirectory in Test).value,
 
     resourceDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "resources",
 
