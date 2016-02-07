@@ -72,7 +72,36 @@ class DocumentLoaderException[Uml <: UML]
 }
 
 object DocumentLoader {
-  
+
+  /**
+    * Copied from Scalaz 7.2.x (not available in 7.1.x)
+    *
+    * @param f a function from A to L \&/ (A \/ B)
+    * @param a initial value
+    * @param L Semigroup for L
+    * @tparam L The type of the This result
+    * @tparam A The type of the That left result
+    * @tparam B The type of the That right result
+    * @return
+    */
+  @scala.annotation.tailrec
+  def tailrecM[L, A, B](f: A => L \&/ (A \/ B))(a: A)(implicit L: Semigroup[L]): L \&/ B = {
+    def go(l0: L)(a0: A): L \&/ (A \/ B) =
+      f(a0) match {
+        case \&/.This(l1) => \&/.This(L.append(l0, l1))
+        case \&/.That(e) => \&/.Both(l0, e)
+        case \&/.Both(l1, e) => \&/.Both(L.append(l0, l1), e)
+      }
+
+    f(a) match {
+      case t @ \&/.This(l) => t
+      case \&/.That(-\/(a0)) => tailrecM(f)(a0)
+      case \&/.That(\/-(b)) => \&/.That(b)
+      case \&/.Both(l, -\/(a0)) => tailrecM(go(l))(a0)
+      case \&/.Both(l, \/-(b)) => \&/.Both(l, b)
+    }
+  }
+
   def show(message: String): Unit =
     java.lang.System.out.println(message)
     
@@ -287,7 +316,7 @@ trait DocumentLoader[Uml <: UML] {
       }
      
      val a0 = MapContentReferences(u=xmi2uml1, c=xmi2contents1, r=references)
-     val aN = \&/.tailrecM[Set[java.lang.Throwable], MapContentReferences, Result](step)(a0)
+     val aN = DocumentLoader.tailrecM[Set[java.lang.Throwable], MapContentReferences, Result](step)(a0)
      aN
   }
   
@@ -328,7 +357,7 @@ trait DocumentLoader[Uml <: UML] {
          }
      
      val a0 = ContentAndOther(c=content, o=other)
-     val aN = \&/.tailrecM[Set[java.lang.Throwable], ContentAndOther, Seq[Elem]](step)(a0)
+     val aN = DocumentLoader.tailrecM[Set[java.lang.Throwable], ContentAndOther, Seq[Elem]](step)(a0)
      aN
   }
   
@@ -473,7 +502,7 @@ trait DocumentLoader[Uml <: UML] {
       }
     
     val a0 = Info(u=xmi2uml, p=xmiPattern, c=content, m=more, r=references)
-    val aN = \&/.tailrecM[Set[java.lang.Throwable], Info, Result](step)(a0)
+    val aN = DocumentLoader.tailrecM[Set[java.lang.Throwable], Info, Result](step)(a0)
     aN
   }
   
@@ -551,7 +580,7 @@ trait DocumentLoader[Uml <: UML] {
            next
        }
     
-    val aN = \&/.tailrecM[Set[java.lang.Throwable], Map[XMIElementDefinition, Seq[Elem]], Unit](
+    val aN = DocumentLoader.tailrecM[Set[java.lang.Throwable], Map[XMIElementDefinition, Seq[Elem]], Unit](
         step)(xmiReferences)
     aN
   }
