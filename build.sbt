@@ -23,15 +23,6 @@ developers := List(
     email="yves.bernard@airbus.com",
     url=url("http://airbus.com")))
 
-lazy val buildUTCDate = SettingKey[String]("build-utc-date", "The UDC Date of the build")
-
-buildUTCDate in Global := {
-  import java.util.{ Date, TimeZone }
-  val formatter = new java.text.SimpleDateFormat("yyyy-MM-dd-HH:mm")
-  formatter.setTimeZone(TimeZone.getTimeZone("UTC"))
-  formatter.format(new Date)
-}
-
 lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
   .enablePlugins(IMCEGitPlugin)
   .enablePlugins(IMCEReleasePlugin)
@@ -76,6 +67,8 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
     cleanFiles += (classDirectory in Test).value,
 
     resourceDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "resources",
+
+    extractArchives := {},
 
     libraryDependencies ++= Seq (
       "org.omg.tiwg" %% "oti-uml-canonical_xmi-serialization"
