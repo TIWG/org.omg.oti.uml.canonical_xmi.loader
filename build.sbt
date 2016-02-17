@@ -124,9 +124,6 @@ def dynamicScriptsResourceSettings(dynamicScriptsProjectName: Option[String] = N
       packageDoc in Test) map {
       (base, bin, src, doc, binT, srcT, docT) =>
         val dir = base / "svn" / "org.omg.oti.uml.loader"
-        (dir ** "*.dynamicScripts").pair(relativeTo(dir)) ++
-          ((dir ** "*.md") --- (dir / "sbt.staging" ***)).pair(relativeTo(dir)) ++
-          (dir / "models" ** "*.mdzip").pair(relativeTo(dir)) ++
           com.typesafe.sbt.packager.MappingsHelper.directory(dir / "resources") ++
           addIfExists(bin, "lib/" + bin.name) ++
           addIfExists(binT, "lib/" + binT.name) ++
