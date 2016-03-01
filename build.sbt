@@ -3,6 +3,7 @@ import sbt.Keys._
 import sbt._
 
 import gov.nasa.jpl.imce.sbt._
+import gov.nasa.jpl.imce.sbt.ProjectHelper._
 
 useGpg := true
 
@@ -137,24 +138,14 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
     organizationName := "JPL, Caltech, Airbus & Object Management Group",
     organizationHomepage := Some(url("http://solitaire.omg.org/browse/TIWG")),
 
-    scalaSource in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "src",
-    scalaSource in Test := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "test",
-
-    classDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "bin",
-    cleanFiles += (classDirectory in Compile).value,
-
-    classDirectory in Test := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "bin.test",
-    cleanFiles += (classDirectory in Test).value,
+    scalaSource in Compile :=
+      baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "src",
+    scalaSource in Test :=
+      baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "test",
 
     resourceDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "resources",
 
     extractArchives := {},
-
-    libraryDependencies ++= Seq (
-      "org.omg.tiwg" %% "oti-uml-canonical_xmi-serialization"
-        % Versions_oti_uml_canonical_xmi_serialization.version % "compile" withSources() withJavadoc() artifacts
-        Artifact("oti-uml-canonical_xmi-serialization", "zip", "zip", Some("resource"), Seq(), None, Map())
-    ),
 
     IMCEKeys.nexusJavadocRepositoryRestAPIURL2RepositoryName := Map(
        "https://oss.sonatype.org/service/local" -> "releases",
@@ -162,9 +153,16 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
        "https://cae-nexuspro.jpl.nasa.gov/nexus/content/groups/jpl.beta.group" -> "JPL Beta Group",
        "https://cae-nexuspro.jpl.nasa.gov/nexus/content/groups/jpl.public.group" -> "JPL Public Group"),
     IMCEKeys.pomRepositoryPathRegex := """\<repositoryPath\>\s*([^\"]*)\s*\<\/repositoryPath\>""".r
-
   )
-
+  .dependsOnSourceProjectOrLibraryArtifacts(
+    "oti-uml-canonical_xmi-serialization",
+    "org.omg.oti.uml.canonical_xmi.serialization",
+    Seq(
+      "org.omg.tiwg" %% "oti-uml-canonical_xmi-serialization"
+        % Versions_oti_uml_canonical_xmi_serialization.version % "compile" withSources() withJavadoc() artifacts
+        Artifact("oti-uml-canonical_xmi-serialization", "zip", "zip", Some("resource"), Seq(), None, Map())
+    )
+  )
 
 def dynamicScriptsResourceSettings(dynamicScriptsProjectName: Option[String] = None): Seq[Setting[_]] = {
 
