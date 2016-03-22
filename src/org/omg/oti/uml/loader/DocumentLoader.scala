@@ -650,7 +650,7 @@ trait DocumentLoader[Uml <: UML] {
                         s"No metaclass updater available for ${xmiElement.xmiType} "+
                         s"for reference $xmiReference")))
         ){ metaclassReferenceMap =>
-          metaclassReferenceMap.get(xmiReference.label)
+          metaclassReferenceMap.find(_._1 == xmiReference.label).map(_._2)
           .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(
                 Set(
@@ -667,8 +667,19 @@ trait DocumentLoader[Uml <: UML] {
         }
       }
     ){ idref =>
-        umlU.metaclass_reference_updater_table.get(xmiElement.xmiType)
-        .fold[Set[java.lang.Throwable] \&/ Unit](
+      xmi2uml
+      .find { case (i, _) => i.xmiID == idref }
+      .fold[Set[java.lang.Throwable] \&/ Unit](
+          \&/.This(
+              Set(
+                  UMLError
+                  .umlUpdateError[Uml, UMLElement[Uml]](
+                      umlU,
+                      Iterable(),
+                      s"Unresolved idref for $xmiReference")))
+        ){ case (xmiRef, umlRef) =>
+          umlU.metaclass_reference_updater_table.get(xmiElement.xmiType)
+          .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(
                 Set(
                     UMLError
@@ -677,10 +688,10 @@ trait DocumentLoader[Uml <: UML] {
                         Iterable(),
                         s"No metaclass updater available for ${xmiElement.xmiType} "+
                         s"for reference $xmiReference")))
-        ){ metaclassReferenceMap =>
-          metaclassReferenceMap.get(xmiReference.label)
-          .fold[Set[java.lang.Throwable] \&/ Unit](
-            \&/.This(
+          ){ metaclassReferenceMap =>
+            metaclassReferenceMap.find(_._1 == xmiRef.element.label).map(_._2)
+            .fold[Set[java.lang.Throwable] \&/ Unit](
+              \&/.This(
                 Set(
                     UMLError
                     .umlUpdateError[Uml, UMLElement[Uml]](
@@ -688,9 +699,10 @@ trait DocumentLoader[Uml <: UML] {
                         Iterable(),
                         s"No reference updater available for ${xmiElement.xmiType} "+
                         s"for reference '${xmiReference.label}' in: $xmiReference")))
-          ){ updater =>
-            DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
-            \&/.That(())
+            ){ updater =>
+              DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
+              \&/.That(())
+            }
           }
         }
     }
@@ -759,8 +771,8 @@ trait DocumentLoader[Uml <: UML] {
                         Iterable(),
                         s"No metaclass updater available for ${xmiE.xmiType} "+
                         s"for attribute '$attributeName' with value $attributeValue")))
-        ){ metaclassAttributeMap =>
-          metaclassAttributeMap.get(attributeName)
+        ){ metaclassAttributeMap =>          
+          metaclassAttributeMap.find(_._1 == attributeName).map(_._2)
           .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(
                 Set(
