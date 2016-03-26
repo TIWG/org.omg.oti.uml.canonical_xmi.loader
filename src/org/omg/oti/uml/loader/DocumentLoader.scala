@@ -150,7 +150,7 @@ trait DocumentLoader[Uml <: UML] {
 
   implicit val umlOps: UMLOps[Uml]
   implicit val documentOps: DocumentOps[Uml]
-
+  
   import documentOps._
 
   /**
@@ -549,7 +549,7 @@ trait DocumentLoader[Uml <: UML] {
    ds: DocumentSet[Uml],
    xmi2uml: XMI2UMLElementMap,
    xmiReferences: Map[XMIElementDefinition, Seq[Elem]])
-  (implicit umlU: UMLUpdate[Uml])
+  (implicit umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : Set[java.lang.Throwable] \&/ Unit = {
     
     def step(a: Map[XMIElementDefinition, Seq[Elem]])
@@ -608,7 +608,7 @@ trait DocumentLoader[Uml <: UML] {
    xmiElement: XMIElementDefinition,
    umlElement: UMLElement[Uml],
    xmiReferences: Seq[Elem])
-  (implicit umlU: UMLUpdate[Uml])
+  (implicit umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
   : Set[java.lang.Throwable] \&/ Unit = {
     val r0: Set[java.lang.Throwable] \&/ Unit = \&/.That(())
     val rN: Set[java.lang.Throwable] \&/ Unit = 
@@ -627,8 +627,23 @@ trait DocumentLoader[Uml <: UML] {
    xmiElement: XMIElementDefinition,
    umlElement: UMLElement[Uml],
    xmiReference: Elem)
-  (implicit umlU: UMLUpdate[Uml])
-  : Set[java.lang.Throwable] \&/ Unit = 
+  (implicit umlU: UMLUpdate[Uml], idg: IDGenerator[Uml])
+  : Set[java.lang.Throwable] \&/ Unit 
+  = {    
+    val updater =
+      umlU.metaclass_composite_updater_table
+      .get(xmiElement.xmiType)
+      .flatMap { metaclassReferenceMap =>
+        metaclassReferenceMap.find(_._1 == xmiReference.label).map(_._2)
+      }
+      .orElse {
+        umlU.metaclass_reference_updater_table
+        .get(xmiElement.xmiType)
+        .flatMap { metaclassReferenceMap =>
+          metaclassReferenceMap.find(_._1 == xmiReference.label).map(_._2)
+        }
+      }
+      
     XMIPattern.matchXMILocalReference(xmiReference)
     .fold[Set[java.lang.Throwable] \&/ Unit](
       XMIPattern.matchXMICrossReference(xmiReference)
@@ -638,8 +653,8 @@ trait DocumentLoader[Uml <: UML] {
              umlU,
              Iterable(umlElement),
              s"Unrecognized XMI reference: $xmiReference")))
-      ){ href =>
-        umlU.metaclass_reference_updater_table.get(xmiElement.xmiType)
+      ){ href =>        
+        updater
         .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(
                 Set(
@@ -649,20 +664,39 @@ trait DocumentLoader[Uml <: UML] {
                         Iterable(),
                         s"No metaclass updater available for ${xmiElement.xmiType} "+
                         s"for reference $xmiReference")))
-        ){ metaclassReferenceMap =>
-          metaclassReferenceMap.find(_._1 == xmiReference.label).map(_._2)
+        ){ updater =>
+          val parts = href.split("#")
+          require(2 == parts.length)
+          val (dURL, idRef) = (parts(0), parts(1))
+          val doc = ds.allDocuments.find { d => 
+            val dURI = OTI_URI.unwrap(d.info.packageURI)            
+            dURL == dURI
+          }
+          doc
+          .fold[Set[java.lang.Throwable] \&/ Unit](
+              \&/.This(
+              Set(
+                  UMLError
+                  .umlUpdateError[Uml, UMLElement[Uml]](
+                      umlU,
+                      Iterable(),
+                      s"Unresolved href=$href for $xmiReference")))
+          ){ d =>
+          val eRef = d.extent.find { e => e.xmiID() == idRef }
+          eRef
           .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(
-                Set(
-                    UMLError
-                    .umlUpdateError[Uml, UMLElement[Uml]](
-                        umlU,
-                        Iterable(),
-                        s"No reference updater available for ${xmiElement.xmiType} "+
-                        s"for reference '${xmiReference.label}' in: $xmiReference")))
-          ){ updater =>
+              Set(
+                  UMLError
+                  .umlUpdateError[Uml, UMLElement[Uml]](
+                      umlU,
+                      Iterable(),
+                      s"Unresolved href=$href for $xmiReference")))
+          ){ umlRef =>
+            val result = updater.update1Link(umlElement, umlRef).leftMap(_.list.to[Set])                  
             DocumentLoader.show(s"* href: $href on: ${xmiElement.xmiType} for ${xmiReference.label}")
-            \&/.That(())
+            result.toThese 
+          }
           }
         }
       }
@@ -678,33 +712,23 @@ trait DocumentLoader[Uml <: UML] {
                       Iterable(),
                       s"Unresolved idref for $xmiReference")))
         ){ case (xmiRef, umlRef) =>
-          umlU.metaclass_reference_updater_table.get(xmiElement.xmiType)
+          updater
           .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(
-                Set(
-                    UMLError
-                    .umlUpdateError[Uml, UMLElement[Uml]](
-                        umlU,
-                        Iterable(),
-                        s"No metaclass updater available for ${xmiElement.xmiType} "+
-                        s"for reference $xmiReference")))
-          ){ metaclassReferenceMap =>
-            metaclassReferenceMap.find(_._1 == xmiRef.element.label).map(_._2)
-            .fold[Set[java.lang.Throwable] \&/ Unit](
-              \&/.This(
-                Set(
-                    UMLError
-                    .umlUpdateError[Uml, UMLElement[Uml]](
-                        umlU,
-                        Iterable(),
-                        s"No reference updater available for ${xmiElement.xmiType} "+
-                        s"for reference '${xmiReference.label}' in: $xmiReference")))
-            ){ updater =>
-              DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
-              \&/.That(())
-            }
-          }
-        }
+              Set(
+                UMLError
+                .umlUpdateError[Uml, UMLElement[Uml]](
+                  umlU,
+                  Iterable(),
+                  s"No reference updater available for ${xmiElement.xmiType} "+
+                  s"for reference '${xmiReference.label}' in: $xmiReference")))
+           ){ updater =>
+             val result = updater.update1Link(umlElement, umlRef).leftMap(_.list.to[Set])
+             DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
+             result.toThese
+           }             
+         }
+      }
     }
   
   /**
