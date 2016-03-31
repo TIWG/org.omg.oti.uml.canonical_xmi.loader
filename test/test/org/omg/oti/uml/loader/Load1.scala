@@ -49,6 +49,7 @@ import org.omg.oti.uml.xmi._
 import scala.{Option,None,Some,StringContext}
 import scala.Predef.{???,classOf,require,String}
 import scala.collection.Seq
+import scala.collection.immutable.Set
 import scala.xml._
 import scala.util.control.Exception._
 
@@ -69,8 +70,8 @@ trait Load1[Uml <: UML] {
         .apply(Option.apply(loadCL.getResource(path)))
     }
     .headOption
-    .fold[NonEmptyList[java.lang.Throwable] \/ java.net.URL](
-      NonEmptyList(
+    .fold[Set[java.lang.Throwable] \/ java.net.URL](
+      Set(
         UMLError.umlAdaptationError(
           s"canot find resource model as: $modelPath1 or $modelPath2"
         )
@@ -80,14 +81,14 @@ trait Load1[Uml <: UML] {
     }
      
   def makeRootPackage(xmiLabel: String)
-  : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]
+  : Set[java.lang.Throwable] \/ UMLPackage[Uml]
   
   def load
   (ds: DocumentSet[Uml])
   (implicit
    loader: DocumentLoader[Uml],
    idg: IDGenerator[Uml])
-  : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml] = {
+  : Set[java.lang.Throwable] \/ UMLPackage[Uml] = {
 
     modelURL
       .flatMap { url: java.net.URL =>
@@ -98,10 +99,10 @@ trait Load1[Uml <: UML] {
           classOf[org.xml.sax.SAXException]
         )
           .either(XML.load(url.openStream()))
-          .fold[NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml]](
+          .fold[Set[java.lang.Throwable] \/ UMLPackage[Uml]](
 
           (cause: java.lang.Throwable) =>
-            -\/(NonEmptyList(documentLoaderException(
+            -\/(Set(documentLoaderException(
               loader,
               s"loadDocument($url) failed: ${cause.getMessage}",
               cause))),

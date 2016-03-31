@@ -40,6 +40,7 @@ package org.omg.oti.uml
 
 import org.omg.oti.uml.read.api.UML
 import scala.Predef.String
+import scala.collection.immutable.Set
 import scalaz._, Scalaz._
 
 package object loader {
@@ -56,6 +57,6 @@ package object loader {
     message: String,
     cause: java.lang.Throwable )
   : java.lang.Throwable
-  = new DocumentLoaderException(dLoader, message, cause.wrapNel.some)
+  = new DocumentLoaderException(dLoader, message, Set(cause).some)
 
 }

@@ -136,7 +136,7 @@ object DocumentLoader {
  * in particular, the computational complexity of Semigroup[M[_]].append
  *
  * Choices of M that do not scale for OTI/XMI document loading:
- * - NonEmptyList
+ * - Set
  *   @todo report this
  * - Seq
  *   (with a custom Semigroup[Seq[_]] as Seq's append)
@@ -161,7 +161,7 @@ trait DocumentLoader[Uml <: UML] {
     * - `\&/.That((lmd: LoadingMutableDocument[Uml], ds: DocumentSet[Uml]))`:
     *   Successful result without errors: a tuple `(lmd, ds)`
     * - `\&/.Both(`
-    *      `nels: NonEmptyList[java.lang.Throwable],`
+    *      `nels: Set[java.lang.Throwable],`
     *      `(lmd: LoadingMutableDocument[Uml], ds: DocumentSet[Uml]))`
     *   A combination of the two cases above.
     */
@@ -436,7 +436,7 @@ trait DocumentLoader[Uml <: UML] {
                     case Some(umlParent) =>
                       val x2u = a.u + (xmiE -> umlE)
                       val compositeMetaPropertyName = xmiE.element.label
-                      val parent2childOK: NonEmptyList[java.lang.Throwable] \/ Unit =
+                      val parent2childOK: Set[java.lang.Throwable] \/ Unit =
                         umlParent.compositeMetaProperties.find((mpf) =>
                           mpf.propertyName == compositeMetaPropertyName &&
                           mpf.domainType.runtimeClass.isInstance(umlParent) &&
@@ -464,7 +464,7 @@ trait DocumentLoader[Uml <: UML] {
                                 cru.update1Link(umlParent, umlE)
 
                               case (None, None, None, None) =>
-                                NonEmptyList(
+                                Set(
                                   documentLoaderException(
                                     this,
                                     s"loadDocument: error in processNestedContent: " +
@@ -475,7 +475,7 @@ trait DocumentLoader[Uml <: UML] {
                             }
 
                           case None =>
-                            NonEmptyList(
+                            Set(
                               documentLoaderException(
                                 this,
                                 s"loadDocument: error in processNestedContent: " +
@@ -693,7 +693,7 @@ trait DocumentLoader[Uml <: UML] {
                       Iterable(),
                       s"Unresolved href=$href for $xmiReference")))
           ){ umlRef =>
-            val result = updater.update1Link(umlElement, umlRef).leftMap(_.list.to[Set])                  
+            val result = updater.update1Link(umlElement, umlRef)
             DocumentLoader.show(s"* href: $href on: ${xmiElement.xmiType} for ${xmiReference.label}")
             result.toThese 
           }
@@ -723,7 +723,7 @@ trait DocumentLoader[Uml <: UML] {
                   s"No reference updater available for ${xmiElement.xmiType} "+
                   s"for reference '${xmiReference.label}' in: $xmiReference")))
            ){ updater =>
-             val result = updater.update1Link(umlElement, umlRef).leftMap(_.list.to[Set])
+             val result = updater.update1Link(umlElement, umlRef)
              DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
              result.toThese
            }             

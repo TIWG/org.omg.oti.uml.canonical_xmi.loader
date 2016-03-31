@@ -52,7 +52,7 @@ trait Construct2[Uml <: UML] extends ConstructionTest[Uml] {
   def addMetamodelReference
   ( pf: UMLProfile[Uml],
     mm: UMLPackage[Uml] )
-  : NonEmptyList[java.lang.Throwable] \/ UMLPackageImport[Uml] =
+  : Set[java.lang.Throwable] \/ UMLPackageImport[Uml] =
   for {
     new_pf_references_mm <- createUMLPackageImport
     all_pf_references_mms = pf.metamodelReference + new_pf_references_mm
@@ -64,7 +64,7 @@ trait Construct2[Uml <: UML] extends ConstructionTest[Uml] {
     * A toplevel package with a metamodel and a profile extending that metamodel
     */
   override def make
-  : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml] =
+  : Set[java.lang.Throwable] \/ UMLPackage[Uml] =
     for {
       top <- createUMLPackage
       _ <- top.setName( "Top".some )

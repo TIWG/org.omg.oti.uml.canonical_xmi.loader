@@ -58,7 +58,7 @@ trait Construct1[Uml <: UML] extends ConstructionTest[Uml] {
    * A toplevel package with two nested packages.
    */
   override def make
-  : NonEmptyList[java.lang.Throwable] \/ UMLPackage[Uml] =
+  : Set[java.lang.Throwable] \/ UMLPackage[Uml] =
     for {
       top <- createUMLPackage
       _ = top.setName( "Top".some )
