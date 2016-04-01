@@ -452,16 +452,16 @@ trait DocumentLoader[Uml <: UML] {
                               ) match {
 
                               case (Some(cru), _, _, _) =>
-                                cru.update1Link(umlParent, umlE)
+                                cru.link(umlParent, umlE)
 
                               case (_, Some(cru), _, _) =>
-                                cru.update1Link(umlParent, umlE)
+                                cru.link(umlParent, umlE)
 
                               case (_, _, Some(cru), _) =>
-                                cru.update1Link(umlParent, umlE)
+                                cru.link(umlParent, umlE)
 
                               case (_, _, _, Some(cru)) =>
-                                cru.update1Link(umlParent, umlE)
+                                cru.link(umlParent, umlE)
 
                               case (None, None, None, None) =>
                                 Set(
@@ -693,7 +693,7 @@ trait DocumentLoader[Uml <: UML] {
                       Iterable(),
                       s"Unresolved href=$href for $xmiReference")))
           ){ umlRef =>
-            val result = updater.update1Link(umlElement, umlRef)
+            val result = updater.link(umlElement, umlRef)
             DocumentLoader.show(s"* href: $href on: ${xmiElement.xmiType} for ${xmiReference.label}")
             result.toThese 
           }
@@ -723,7 +723,7 @@ trait DocumentLoader[Uml <: UML] {
                   s"No reference updater available for ${xmiElement.xmiType} "+
                   s"for reference '${xmiReference.label}' in: $xmiReference")))
            ){ updater =>
-             val result = updater.update1Link(umlElement, umlRef)
+             val result = updater.link(umlElement, umlRef)
              DocumentLoader.show(s"* idref: $idref on: ${xmiElement.xmiType} for ${xmiReference.label}")
              result.toThese
            }             
