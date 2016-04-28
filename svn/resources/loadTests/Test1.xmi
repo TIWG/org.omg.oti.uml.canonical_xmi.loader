@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI 
+  xmlns:xmi="http://www.omg.org/spec/XMI/20131001"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:uml="http://www.omg.org/spec/UML/20131001"
+	xmlns:mofext="http://www.omg.org/spec/MOF/20131001"
+	xmlns:StandardProfile="http://www.omg.org/spec/UML/20131001/StandardProfile">
+	<uml:Package 
+	   xmi:id="1" 
+	   xmi:type="uml:Package"
+	   name="P">
+		<packagedElement 
+			xmi:id="2" 
+		  xmi:type="uml:OpaqueExpression"
+		  name="oe">
+			<body>a</body>
+			<body>b</body>
+			<body>c</body>
+		</packagedElement>
+		<packagedElement 
+			xmi:id="3" 
+		  xmi:type="uml:DurationConstraint"
+		  name="dc">
+			<firstEvent>true</firstEvent>
+			<firstEvent>false</firstEvent>
+		</packagedElement>
+	</uml:Package>
+</xmi:XMI>
