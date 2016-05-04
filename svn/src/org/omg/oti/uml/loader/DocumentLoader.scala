@@ -38,10 +38,10 @@
  */
 package org.omg.oti.uml.loader
 
-import org.omg.oti.uml.OTIPrimitiveTypes._
+import org.omg.oti.json.common._
+import org.omg.oti.json.common.OTIPrimitiveTypes._
 import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.canonicalXMI._
-import org.omg.oti.uml.characteristics._
 import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.read.operations._
 import org.omg.oti.uml.write.api._
