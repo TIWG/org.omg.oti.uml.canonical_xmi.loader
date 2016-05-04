@@ -139,11 +139,11 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
     organizationHomepage := Some(url("http://solitaire.omg.org/browse/TIWG")),
 
     scalaSource in Compile :=
-      baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "src",
+      baseDirectory.value / "svn" / "src",
     scalaSource in Test :=
-      baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "test",
+      baseDirectory.value / "svn" / "test",
 
-    resourceDirectory in Compile := baseDirectory.value / "svn" / "org.omg.oti.uml.loader" / "resources",
+    resourceDirectory in Compile := baseDirectory.value / "svn" / "resources",
 
     extractArchives := {},
 
@@ -198,7 +198,7 @@ def dynamicScriptsResourceSettings(dynamicScriptsProjectName: Option[String] = N
       packageSrc in Test,
       packageDoc in Test) map {
       (base, bin, src, doc, binT, srcT, docT) =>
-        val dir = base / "svn" / "org.omg.oti.uml.loader"
+        val dir = base / "svn"
           com.typesafe.sbt.packager.MappingsHelper.directory(dir / "resources") ++
           addIfExists(bin, "lib/" + bin.name) ++
           addIfExists(binT, "lib/" + binT.name) ++
