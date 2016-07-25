@@ -7,6 +7,8 @@ import gov.nasa.jpl.imce.sbt.ProjectHelper._
 
 useGpg := true
 
+updateOptions := updateOptions.value.withCachedResolution(true)
+
 developers := List(
   Developer(
     id="rouquett",
@@ -107,11 +109,11 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
   .settings(IMCEReleasePlugin.packageReleaseProcessSettings)
   .settings(dynamicScriptsResourceSettings(Some("org.omg.oti.uml.canonical_xmi.loader")))
   .settings(IMCEPlugin.strictScalacFatalWarningsSettings)
-  .settings(docSettings(diagrams=false))
+  //.settings(docSettings(diagrams=false))
   .settings(
     IMCEKeys.licenseYearOrRange := "2014-2016",
     IMCEKeys.organizationInfo := IMCEPlugin.Organizations.oti,
-    IMCEKeys.targetJDK := IMCEKeys.jdk17.value,
+    IMCEKeys.targetJDK := IMCEKeys.jdk18.value,
 
     organization := "org.omg.tiwg",
     organizationHomepage :=

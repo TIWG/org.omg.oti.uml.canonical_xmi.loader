@@ -47,7 +47,7 @@ import org.omg.oti.uml.read.api._
 import org.omg.oti.uml.xmi._
 
 import scala.{Option,None,Some,StringContext}
-import scala.Predef.{???,classOf,require,String}
+import scala.Predef.{classOf,require,String}
 import scala.collection.Seq
 import scala.collection.immutable.Set
 import scala.xml._

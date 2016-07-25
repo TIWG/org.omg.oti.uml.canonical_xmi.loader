@@ -38,7 +38,6 @@
  */
 package test.org.omg.oti.uml.loader
 
-import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.canonicalXMI._
 import org.omg.oti.uml.loader.DocumentLoader
 import org.omg.oti.uml.read.api._
@@ -47,7 +46,6 @@ import org.omg.oti.uml.xmi._
 
 import scala.{Option, None, Some, StringContext}
 import scala.collection.immutable._
-import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 import scalaz._
 import scala.Predef.classOf

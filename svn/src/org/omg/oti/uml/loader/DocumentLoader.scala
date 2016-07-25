@@ -47,13 +47,11 @@ import org.omg.oti.uml.read.operations._
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.xmi._
 
-import scala.annotation
 import scala.{Option,None,Some,StringContext,Unit}
 import scala.collection.immutable._
 import scala.collection.Seq
 import scala.Predef.{Set => _, Map => _, _}
-import scala.xml.{Document => XMLDocument, _}
-import scala.reflect.runtime.universe
+import scala.xml.{Elem, XML}
 import scala.reflect.runtime.universe._
 import scalaz._, Scalaz._
 

@@ -38,7 +38,6 @@
  */
 package test.org.omg.oti.uml.loader
 
-import org.omg.oti.uml.UMLError
 import org.omg.oti.uml.write.api._
 import org.omg.oti.uml.read.api._
 import scala.collection.immutable._

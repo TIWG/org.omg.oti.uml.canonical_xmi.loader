@@ -42,11 +42,10 @@ import scala.xml._
 
 import scala.xml._
 import scala.annotation
-import scala.{Option,None,Some,StringContext,Unit}
+import scala.{Option,None,Some,StringContext}
 import scala.collection.immutable._
 import scala.collection.Seq
 import scala.Predef.{Set => _, Map => _, _}
-import java.net.URL
 
 /**
  * A pattern of an XMI tree rooted at an XML Element

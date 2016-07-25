@@ -2,5 +2,5 @@
 .ensime*
 .idea
 .iml
-links.json
+off.links.json
 target
