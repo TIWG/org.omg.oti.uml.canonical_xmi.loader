@@ -1,5 +1,4 @@
-This GIT repository only contains the IMCE CI build/publishing configuration
-for the OMG OTI UML Canonical XMI Loader,
-it contains a copy of the OMG OTI UML Canonical XMI Loader SVN repository:
+# OMG Tool-Interoperability (OTI) API parser for OMG Canonical XMI 2.5 serialization."
 
-https://www.omgwiki.org/repos/TIWG/Eclipse%20Scala%20Projects/org.omg.oti.uml.loader/
+[![Build Status](https://travis-ci.org/TIWG/org.omg.oti.uml.canonical_xmi.loader.svg?branch=master)](https://travis-ci.org/TIWG/org.omg.oti.uml.canonical_xmi.loader)
+ [ ![Download](https://api.bintray.com/packages/tiwg/org.omg.tiwg/org.omg.oti.uml.canonical_xmi.loader/images/download.svg) ](https://bintray.com/tiwg/org.omg.tiwg/org.omg.oti.uml.canonical_xmi.loader/_latestVersion)
