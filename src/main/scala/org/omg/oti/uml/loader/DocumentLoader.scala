@@ -661,8 +661,8 @@ trait DocumentLoader[Uml <: UML] {
                       umlU,
                       Iterable(),
                       s"Unresolved href=$href for $xmiReference")))
-          ){ d =>
-          val eRef = d.extent.find { e => e.xmiID() == idRef }
+          ){ dr =>
+          val eRef = dr.extent.find { e => TOOL_SPECIFIC_ID.unwrap(e.toolSpecific_id) == idRef }
           eRef
           .fold[Set[java.lang.Throwable] \&/ Unit](
             \&/.This(

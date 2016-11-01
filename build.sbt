@@ -14,91 +14,16 @@ resolvers ++= {
     Seq.empty[Resolver]
 }
 
-import scala.io.Source
-import scala.util.control.Exception._
-
-def docSettings(diagrams:Boolean): Seq[Setting[_]] =
-  Seq(
-    sources in (Compile,doc) <<= (git.gitUncommittedChanges, sources in (Compile,compile)) map {
-      (uncommitted, compileSources) =>
-        if (uncommitted)
-          Seq.empty
-        else
-          compileSources
-    },
-
-    sources in (Test,doc) <<= (git.gitUncommittedChanges, sources in (Test,compile)) map {
-      (uncommitted, testSources) =>
-        if (uncommitted)
-          Seq.empty
-        else
-          testSources
-    },
-
-    scalacOptions in (Compile,doc) ++=
-      (if (diagrams)
-        Seq("-diagrams")
-      else
-        Seq()
-        ) ++
-        Seq(
-          "-doc-title", name.value,
-          "-doc-root-content", baseDirectory.value + "/rootdoc.txt"
-        ),
-    autoAPIMappings := ! git.gitUncommittedChanges.value,
-    apiMappings <++=
-      ( git.gitUncommittedChanges,
-        dependencyClasspath in Compile in doc,
-        IMCEKeys.nexusJavadocRepositoryRestAPIURL2RepositoryName,
-        IMCEKeys.pomRepositoryPathRegex,
-        streams ) map { (uncommitted, deps, repoURL2Name, repoPathRegex, s) =>
-        if (uncommitted)
-          Map[File, URL]()
-        else
-          (for {
-            jar <- deps
-            url <- jar.metadata.get(AttributeKey[ModuleID]("moduleId")).flatMap { moduleID =>
-              val urls = for {
-                (repoURL, repoName) <- repoURL2Name
-                (query, match2publishF) = IMCEPlugin.nexusJavadocPOMResolveQueryURLAndPublishURL(
-                  repoURL, repoName, moduleID)
-                url <- nonFatalCatch[Option[URL]]
-                  .withApply { (_: java.lang.Throwable) => None }
-                  .apply({
-                    val conn = query.openConnection.asInstanceOf[java.net.HttpURLConnection]
-                    conn.setRequestMethod("GET")
-                    conn.setDoOutput(true)
-                    repoPathRegex
-                      .findFirstMatchIn(Source.fromInputStream(conn.getInputStream).getLines.mkString)
-                      .map { m =>
-                        val javadocURL = match2publishF(m)
-                        s.log.info(s"Javadoc for: $moduleID")
-                        s.log.info(s"= mapped to: $javadocURL")
-                        javadocURL
-                      }
-                  })
-              } yield url
-              urls.headOption
-            }
-          } yield jar.data -> url).toMap
-      }
-  )
-
 lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
   .enablePlugins(IMCEGitPlugin)
   .enablePlugins(IMCEReleasePlugin)
   .settings(IMCEReleasePlugin.packageReleaseProcessSettings)
   .settings(dynamicScriptsResourceSettings(Some("org.omg.oti.uml.canonical_xmi.loader")))
   .settings(IMCEPlugin.strictScalacFatalWarningsSettings)
-  //.settings(docSettings(diagrams=false))
   .settings(
     IMCEKeys.licenseYearOrRange := "2014-2016",
     IMCEKeys.organizationInfo := IMCEPlugin.Organizations.oti,
     IMCEKeys.targetJDK := IMCEKeys.jdk18.value,
-
-    organization := "org.omg.tiwg",
-    organizationHomepage :=
-      Some(url("http://www.omg.org/members/sysml-rtf-wiki/doku.php?id=rtf5:groups:tools_infrastructure:index")),
 
     buildInfoPackage := "org.omg.oti.uml.canonical_xmi.loader",
     buildInfoKeys ++= Seq[BuildInfoKey](BuildInfoKey.action("buildDateUTC") { buildUTCDate.value }),
@@ -118,8 +43,6 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
     },
 
     git.baseVersion := Versions.version,
-    organizationName := "JPL, Caltech, Airbus & Object Management Group",
-    organizationHomepage := Some(url("http://solitaire.omg.org/browse/TIWG")),
 
     resourceDirectory in Compile := baseDirectory.value / "svn" / "resources",
 
@@ -163,27 +86,33 @@ def dynamicScriptsResourceSettings(dynamicScriptsProjectName: Option[String] = N
       normalizedName.value + "_" + scalaBinaryVersion.value + "-" + version.value + "-resource",
 
     // contents of the '*-resource.zip' to be produced by 'universal:packageBin'
-    mappings in Universal <++= (
-      baseDirectory,
-      packageBin in Compile,
-      packageSrc in Compile,
-      packageDoc in Compile,
-      packageBin in Test,
-      packageSrc in Test,
-      packageDoc in Test) map {
-      (base, bin, src, doc, binT, srcT, docT) =>
-        val dir = base / "svn"
-          com.typesafe.sbt.packager.MappingsHelper.directory(dir / "resources") ++
-          addIfExists(bin, "lib/" + bin.name) ++
-          addIfExists(binT, "lib/" + binT.name) ++
-          addIfExists(src, "lib.sources/" + src.name) ++
-          addIfExists(srcT, "lib.sources/" + srcT.name) ++
-          addIfExists(doc, "lib.javadoc/" + doc.name) ++
-          addIfExists(docT, "lib.javadoc/" + docT.name)
+    mappings in Universal ++= {
+      val base = baseDirectory.value
+      val bin = (packageBin in Compile).value
+      val src = (packageSrc in Compile).value
+      val doc = (packageDoc in Compile).value
+      val binT = (packageBin in Test).value
+      val srcT = (packageSrc in Test).value
+      val docT = (packageDoc in Test).value
+
+      val dir = base / "svn"
+      com.typesafe.sbt.packager.MappingsHelper.directory(dir / "resources") ++
+        addIfExists(bin, "lib/" + bin.name) ++
+        addIfExists(binT, "lib/" + binT.name) ++
+        addIfExists(src, "lib.sources/" + src.name) ++
+        addIfExists(srcT, "lib.sources/" + srcT.name) ++
+        addIfExists(doc, "lib.javadoc/" + doc.name) ++
+        addIfExists(docT, "lib.javadoc/" + docT.name)
     },
 
-    artifacts <+= (name in Universal) { n => Artifact(n, "zip", "zip", Some("resource"), Seq(), None, Map()) },
-    packagedArtifacts <+= (packageBin in Universal, name in Universal) map { (p, n) =>
+    artifacts += {
+      val n = (name in Universal).value
+      Artifact(n, "zip", "zip", Some("resource"), Seq(), None, Map())
+    },
+
+    packagedArtifacts += {
+      val p = (packageBin in Universal).value
+      val n = (name in Universal).value
       Artifact(n, "zip", "zip", Some("resource"), Seq(), None, Map()) -> p
     }
   )
