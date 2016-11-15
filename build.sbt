@@ -32,7 +32,7 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
       import Path.{flat, relativeTo}
       val base = (sourceManaged in Compile).value
       val srcs = (managedSources in Compile).value
-      srcs x (relativeTo(base) | flat)
+      srcs pair (relativeTo(base) | flat)
     },
 
     projectID := {
