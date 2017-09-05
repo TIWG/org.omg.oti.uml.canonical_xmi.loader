@@ -17,8 +17,6 @@ organizationHomepage := Some(url(s"https://github.com/TIWG"))
 
 git.remoteRepo := s"git@github.com:TIWG/${moduleName.value}"
 
-startYear := Some(2016)
-
 scmInfo := Some(ScmInfo(
   browseUrl = url(s"https://github.com/TIWG/${moduleName.value}"),
   connection = "scm:"+git.remoteRepo.value))

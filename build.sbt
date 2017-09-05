@@ -16,8 +16,6 @@ resolvers ++= {
 
 lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
   .enablePlugins(IMCEGitPlugin)
-  .enablePlugins(IMCEReleasePlugin)
-  .settings(IMCEReleasePlugin.packageReleaseProcessSettings)
   .settings(dynamicScriptsResourceSettings("org.omg.oti.uml.canonical_xmi.loader"))
   .settings(IMCEPlugin.strictScalacFatalWarningsSettings)
   .settings(
@@ -45,8 +43,6 @@ lazy val root = Project("oti-uml-canonical_xmi-loader", file("."))
     git.baseVersion := Versions.version,
 
     resourceDirectory in Compile := baseDirectory.value / "resources",
-
-    extractArchives := {},
 
     resolvers += Resolver.bintrayRepo("jpl-imce", "gov.nasa.jpl.imce"),
     resolvers += Resolver.bintrayRepo("tiwg", "org.omg.tiwg"),
